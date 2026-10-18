@@ -1,0 +1,71 @@
+<!-- ==========================================================
+     footer.html — site footer
+     Loaded into every page by assets/js/components.js (Step 13).
+     data-brand-*, data-company and data-year are filled in from
+     config.js. Links tagged data-feature only show when that
+     feature is switched on.
+     ========================================================== -->
+
+<footer class="site-footer">
+  <div class="container">
+
+    <div class="footer-grid">
+
+      <div class="footer-brand">
+        <a class="nav-brand" href="/index.html" aria-label="Analytical home">
+          <span class="nav-brand-mark" data-brand-letter>A</span>
+          <span data-brand-name>Analytical</span>
+        </a>
+        <p data-brand-tagline>Where the world's tech people build, learn and earn.</p>
+      </div>
+
+      <div class="footer-col" data-feature-group>
+        <h4>Platform</h4>
+        <ul>
+          <li data-feature="marketplace"><a href="/pages/marketplace/browse.html">Marketplace</a></li>
+          <li data-feature="jobs"><a href="/pages/jobs/browse.html">Jobs</a></li>
+          <li data-feature="qa"><a href="/pages/qa/index.html">Q&amp;A</a></li>
+          <li data-feature="learn"><a href="/pages/learn/courses.html">Learn</a></li>
+          <li data-feature="community"><a href="/pages/community/groups.html">Community</a></li>
+          <li data-feature="data"><a href="/pages/data/datasets.html">Data</a></li>
+          <li data-feature="search"><a href="/pages/search.html">Search</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Account</h4>
+        <ul>
+          <li data-auth="out"><a href="/pages/auth/register.html">Create account</a></li>
+          <li data-auth="out"><a href="/pages/auth/login.html">Log in</a></li>
+          <li class="hidden" data-auth="in"><a href="/pages/dashboard/index.html">Dashboard</a></li>
+          <li class="hidden" data-auth="in"><a href="/pages/profile/view.html">My profile</a></li>
+          <li class="hidden" data-auth="in"><a href="/pages/profile/edit.html">Edit profile</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Company</h4>
+        <ul>
+          <li><a href="/pages/about.html">About</a></li>
+          <li><a href="/pages/contact.html">Contact</a></li>
+          <li><a href="/pages/help.html">Help center</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h4>Legal</h4>
+        <ul>
+          <li><a href="/pages/privacy.html">Privacy policy</a></li>
+          <li><a href="/pages/terms.html">Terms of service</a></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <div class="footer-bottom">
+      <span>&copy; <span data-year>2026</span> <span data-company>Nexabay Technologies</span>. All rights reserved.</span>
+      <span><span data-brand-name>Analytical</span> is a product of <span data-company>Nexabay Technologies</span>.</span>
+    </div>
+
+  </div>
+</footer>
