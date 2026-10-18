@@ -1,100 +1,106 @@
 /* ==========================================================
    base.css — design tokens, reset, typography, utilities
-   Mobile-first. Light + dark themes.
+   Theme: black and gold. Dark is the main theme.
+   Mobile-first.
    ========================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-/* ---------- Design tokens (light theme default) ---------- */
+/* ---------- Design tokens (dark theme is the default) ---------- */
 :root {
-  /* Brand */
-  --brand-50:  #eef2ff;
-  --brand-100: #e0e7ff;
-  --brand-200: #c7d2fe;
-  --brand-300: #a5b4fc;
-  --brand-400: #818cf8;
-  --brand-500: #6366f1;
-  --brand-600: #4f46e5;
-  --brand-700: #4338ca;
-  --brand-800: #3730a3;
-  --brand-900: #312e81;
+  /* Gold scale: 50 lightest, 900 darkest */
+  --brand-50:  #fcf7e6;
+  --brand-100: #f7ecc6;
+  --brand-200: #f0dd9b;
+  --brand-300: #e9cc70;
+  --brand-400: #e2bf50;
+  --brand-500: #dbb53f;
+  --brand-600: #d4af37;   /* main gold: buttons and highlights */
+  --brand-700: #b8941f;
+  --brand-800: #8c6f14;
+  --brand-900: #5e4a0d;
 
-  --accent:      #06b6d4;
-  --accent-dark: #0891b2;
+  --accent:      #f3dd91; /* champagne */
+  --accent-dark: #c9a227;
+  --gold-gradient: linear-gradient(135deg, #f3dd91 0%, #d4af37 48%, #a8841c 100%);
 
   /* Status */
-  --success:    #16a34a;
-  --success-bg: #dcfce7;
-  --warning:    #d97706;
-  --warning-bg: #fef3c7;
-  --danger:     #dc2626;
-  --danger-bg:  #fee2e2;
-  --info:       #2563eb;
-  --info-bg:    #dbeafe;
+  --success:    #3fb27f;
+  --success-bg: rgba(63, 178, 127, 0.16);
+  --warning:    #e0a526;
+  --warning-bg: rgba(224, 165, 38, 0.16);
+  --danger:     #e5584f;
+  --danger-bg:  rgba(229, 88, 79, 0.16);
+  --info:       #5b9bd5;
+  --info-bg:    rgba(91, 155, 213, 0.16);
 
   /* Surfaces and text */
-  --bg:           #ffffff;
-  --bg-soft:      #f8fafc;
-  --bg-muted:     #f1f5f9;
-  --surface:      #ffffff;
-  --surface-hover:#f8fafc;
-  --border:       #e2e8f0;
-  --border-strong:#cbd5e1;
+  --bg:            #0a0a0a;
+  --bg-soft:       #101010;
+  --bg-muted:      #171717;
+  --surface:       #121212;
+  --surface-hover: #1a1a1a;
+  --border:        #262219;
+  --border-strong: #3b3424;
 
-  --text:         #0f172a;
-  --text-soft:    #475569;
-  --text-muted:   #64748b;
-  --text-on-brand:#ffffff;
+  --text:          #f2eee3;
+  --text-soft:     #bfb8a7;
+  --text-muted:    #8c8574;
+  --text-on-brand: #0a0a0a;
 
-  --link:         var(--brand-600);
-  --link-hover:   var(--brand-700);
+  --link:       #e2bf50;
+  --link-hover: #f0d98a;
+
+  /* Focus ring (gold) */
+  --focus-ring: rgba(212, 175, 55, 0.28);
 
   /* Typography */
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   --fs-xs:   0.75rem;
   --fs-sm:   0.875rem;
-  --fs-base: 1rem;
-  --fs-md:   1.125rem;
-  --fs-lg:   1.25rem;
-  --fs-xl:   1.5rem;
-  --fs-2xl:  1.875rem;
-  --fs-3xl:  2.25rem;
-  --fs-4xl:  3rem;
+  --fs-base: 1rem;       /* keep at 16px: stops phones zooming into form fields */
+  --fs-md:   1.0625rem;
+  --fs-lg:   1.1875rem;
+  --fs-xl:   1.375rem;
+  --fs-2xl:  1.625rem;
+  --fs-3xl:  2rem;
+  --fs-4xl:  2.5rem;
 
   --lh-tight: 1.2;
   --lh-snug:  1.4;
-  --lh-normal:1.6;
+  --lh-normal:1.55;
 
-  /* Spacing scale */
+  /* Spacing scale (tight but not cramped) */
   --sp-1: 0.25rem;
   --sp-2: 0.5rem;
   --sp-3: 0.75rem;
   --sp-4: 1rem;
-  --sp-5: 1.25rem;
-  --sp-6: 1.5rem;
-  --sp-8: 2rem;
-  --sp-10: 2.5rem;
-  --sp-12: 3rem;
-  --sp-16: 4rem;
-  --sp-20: 5rem;
+  --sp-5: 1.125rem;
+  --sp-6: 1.375rem;
+  --sp-8: 1.75rem;
+  --sp-10: 2.125rem;
+  --sp-12: 2.5rem;
+  --sp-16: 3.25rem;
+  --sp-20: 4rem;
 
-  /* Radius */
-  --radius-sm: 6px;
-  --radius:    10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  /* Radius (slightly sharper for a mature look) */
+  --radius-sm: 4px;
+  --radius:    6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
   --radius-full: 999px;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
-  --shadow:    0 4px 12px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow:    0 6px 18px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
 
   /* Layout */
-  --container: 1200px;
-  --nav-height: 64px;
+  --container: 1120px;
+  --nav-height: 60px;
 
   /* Motion */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
@@ -107,67 +113,42 @@
   --z-modal: 500;
   --z-toast: 900;
 
-  color-scheme: light;
-}
-
-/* ---------- Dark theme ---------- */
-[data-theme="dark"] {
-  --bg:           #0b1020;
-  --bg-soft:      #0f1629;
-  --bg-muted:     #151d33;
-  --surface:      #131a2e;
-  --surface-hover:#1a2340;
-  --border:       #232d4a;
-  --border-strong:#33405f;
-
-  --text:         #e8ecf5;
-  --text-soft:    #b4bdd3;
-  --text-muted:   #8793ae;
-
-  --link:         var(--brand-300);
-  --link-hover:   var(--brand-200);
-
-  --success-bg: rgba(22, 163, 74, 0.18);
-  --warning-bg: rgba(217, 119, 6, 0.18);
-  --danger-bg:  rgba(220, 38, 38, 0.18);
-  --info-bg:    rgba(37, 99, 235, 0.18);
-
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow:    0 4px 12px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
-
   color-scheme: dark;
 }
 
-/* Follow the device setting when the user has not chosen a theme */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg:           #0b1020;
-    --bg-soft:      #0f1629;
-    --bg-muted:     #151d33;
-    --surface:      #131a2e;
-    --surface-hover:#1a2340;
-    --border:       #232d4a;
-    --border-strong:#33405f;
+/* ---------- Light theme (warm ivory and gold) ---------- */
+[data-theme="light"] {
+  --bg:            #faf8f3;
+  --bg-soft:       #f3efe4;
+  --bg-muted:      #ece6d6;
+  --surface:       #ffffff;
+  --surface-hover: #f7f3e8;
+  --border:        #e4dcc6;
+  --border-strong: #cfc4a4;
 
-    --text:         #e8ecf5;
-    --text-soft:    #b4bdd3;
-    --text-muted:   #8793ae;
+  --text:          #14110a;
+  --text-soft:     #4d4638;
+  --text-muted:    #7a7260;
 
-    --link:         var(--brand-300);
-    --link-hover:   var(--brand-200);
+  --link:       #8a6a14;
+  --link-hover: #6b5210;
 
-    --success-bg: rgba(22, 163, 74, 0.18);
-    --warning-bg: rgba(217, 119, 6, 0.18);
-    --danger-bg:  rgba(220, 38, 38, 0.18);
-    --info-bg:    rgba(37, 99, 235, 0.18);
+  --focus-ring: rgba(184, 148, 31, 0.28);
 
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow:    0 4px 12px rgba(0, 0, 0, 0.45);
-    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --success:    #15803d;
+  --success-bg: #dcfce7;
+  --warning:    #b45309;
+  --warning-bg: #fef3c7;
+  --danger:     #dc2626;
+  --danger-bg:  #fee2e2;
+  --info:       #2563eb;
+  --info-bg:    #dbeafe;
 
-    color-scheme: dark;
-  }
+  --shadow-sm: 0 1px 2px rgba(20, 17, 10, 0.08);
+  --shadow:    0 6px 18px rgba(20, 17, 10, 0.1);
+  --shadow-lg: 0 16px 40px rgba(20, 17, 10, 0.16);
+
+  color-scheme: light;
 }
 
 /* ---------- Reset ---------- */
@@ -181,14 +162,14 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   scroll-behavior: smooth;
-  scroll-padding-top: calc(var(--nav-height) + 16px);
+  scroll-padding-top: calc(var(--nav-height) + 12px);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   font-family: var(--font-sans);
-  font-size: var(--fs-base);
+  font-size: 0.9375rem; /* 15px body text */
   line-height: var(--lh-normal);
   color: var(--text);
   background: var(--bg);
@@ -255,22 +236,33 @@ table {
 hr {
   border: 0;
   border-top: 1px solid var(--border);
-  margin: var(--sp-6) 0;
+  margin: var(--sp-5) 0;
 }
 
 /* ---------- Typography ---------- */
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 700;
+/* Headings h1 to h3 use the serif display font. h4 to h6 stay sans
+   so small labels (footer titles, card labels) stay crisp. */
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
   line-height: var(--lh-tight);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.01em;
   color: var(--text);
 }
 
-h1 { font-size: var(--fs-2xl); font-weight: 800; }
+h4, h5, h6 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  line-height: var(--lh-snug);
+  letter-spacing: -0.005em;
+  color: var(--text);
+}
+
+h1 { font-size: var(--fs-2xl); font-weight: 700; }
 h2 { font-size: var(--fs-xl); }
 h3 { font-size: var(--fs-lg); }
 h4 { font-size: var(--fs-md); }
-h5, h6 { font-size: var(--fs-base); }
+h5, h6 { font-size: var(--fs-sm); }
 
 @media (min-width: 768px) {
   h1 { font-size: var(--fs-3xl); }
@@ -321,13 +313,18 @@ pre code {
 }
 
 ::selection {
-  background: var(--brand-500);
-  color: #fff;
+  background: var(--brand-600);
+  color: var(--text-on-brand);
+}
+
+/* The brand name in the nav and footer uses the display font */
+.nav-brand {
+  font-family: var(--font-display);
 }
 
 /* ---------- Accessibility ---------- */
 :focus-visible {
-  outline: 2px solid var(--brand-500);
+  outline: 2px solid var(--brand-600);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
 }
@@ -349,16 +346,17 @@ pre code {
   top: -48px;
   left: var(--sp-4);
   background: var(--brand-600);
-  color: #fff;
+  color: var(--text-on-brand);
   padding: var(--sp-2) var(--sp-4);
   border-radius: var(--radius);
+  font-weight: 600;
   z-index: calc(var(--z-toast) + 1);
   transition: top var(--t-fast) var(--ease);
 }
 
 .skip-link:focus {
   top: var(--sp-2);
-  color: #fff;
+  color: var(--text-on-brand);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -395,11 +393,11 @@ pre code {
 }
 
 .section {
-  padding-block: var(--sp-12);
+  padding-block: var(--sp-10);
 }
 
 @media (min-width: 768px) {
-  .section { padding-block: var(--sp-20); }
+  .section { padding-block: var(--sp-16); }
 }
 
 .hidden { display: none !important; }
@@ -407,7 +405,7 @@ pre code {
 .text-center { text-align: center; }
 .text-muted  { color: var(--text-muted); }
 .text-soft   { color: var(--text-soft); }
-.text-brand  { color: var(--brand-600); }
+.text-brand  { color: var(--brand-500); }
 .text-success{ color: var(--success); }
 .text-danger { color: var(--danger); }
 .text-sm     { font-size: var(--fs-sm); }
@@ -416,6 +414,7 @@ pre code {
 .fw-600 { font-weight: 600; }
 .fw-700 { font-weight: 700; }
 .mono   { font-family: var(--font-mono); }
+.font-display { font-family: var(--font-display); }
 .truncate {
   overflow: hidden;
   text-overflow: ellipsis;
