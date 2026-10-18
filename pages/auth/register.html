@@ -1,21 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Create your account | Analytical</title>
   <meta name="description" content="Create a free Analytical account and join tech people from around the world.">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#0a0a0a">
 
-  <!-- Apply the saved theme before the page paints, so there is no flash -->
+  <!-- Black is the default theme. A saved choice is respected. -->
   <script>
     (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
       try {
-        var saved = localStorage.getItem('analytical-theme');
+        var saved = localStorage.getItem(key);
         if (saved === 'light' || saved === 'dark') {
-          document.documentElement.setAttribute('data-theme', saved);
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
         }
-      } catch (e) { /* storage blocked: fall back to the device setting */ }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
     })();
   </script>
 
@@ -26,14 +31,14 @@
   <style>
     /* Styles used only on the auth pages */
     .input-group.no-icon .input {
-      padding-left: 0.9rem;
+      padding-left: 0.85rem;
       padding-right: 3rem;
     }
 
     .auth-side-list {
       list-style: none;
       padding: 0;
-      margin: var(--sp-6) 0 0;
+      margin: var(--sp-5) 0 0;
       display: grid;
       gap: var(--sp-3);
     }
@@ -42,21 +47,24 @@
       display: flex;
       gap: var(--sp-3);
       align-items: flex-start;
-      color: #fff;
-      opacity: 0.92;
+      color: #f2eee3;
+      font-size: var(--fs-sm);
     }
 
     .auth-side-list svg {
       flex-shrink: 0;
-      margin-top: 3px;
+      margin-top: 2px;
+      color: #d4af37;
     }
 
     .auth-title {
+      font-size: var(--fs-xl);
       margin-bottom: var(--sp-1);
     }
 
     .auth-sub {
-      margin-bottom: var(--sp-6);
+      margin-bottom: var(--sp-5);
+      font-size: var(--fs-sm);
     }
 
     .status-muted   { color: var(--text-muted); }
@@ -68,14 +76,21 @@
     }
 
     .confirm-icon {
-      width: 56px;
-      height: 56px;
+      width: 52px;
+      height: 52px;
       margin: 0 auto var(--sp-4);
       border-radius: var(--radius-full);
       display: grid;
       place-items: center;
-      background: var(--success-bg);
-      color: var(--success);
+      background: rgba(212, 175, 55, 0.14);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: var(--brand-400);
+    }
+
+    [data-theme="light"] .confirm-icon {
+      background: var(--brand-50);
+      border-color: var(--brand-200);
+      color: var(--brand-800);
     }
 
     .confirm-email {
@@ -101,15 +116,15 @@
 
         <ul class="auth-side-list">
           <li>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
             <span>A public profile and portfolio that shows your skills</span>
           </li>
           <li>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
             <span>Sell projects, find jobs, learn and ask questions as each module opens</span>
           </li>
           <li>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
             <span>Free to join, from any country</span>
           </li>
         </ul>
@@ -122,7 +137,7 @@
 
             <!-- Sign-up form -->
             <div id="register-view">
-              <h1 class="auth-title" style="font-size: var(--fs-2xl);">Create your account</h1>
+              <h1 class="auth-title">Create your account</h1>
               <p class="auth-sub">It is free and takes about a minute.</p>
 
               <div class="alert alert-danger hidden" id="form-error" role="alert"></div>
@@ -198,7 +213,7 @@
             <!-- Shown after the account is created -->
             <div class="confirm-panel hidden" id="confirm-view">
               <div class="confirm-icon">
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-10 6L2 7"></path></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-10 6L2 7"></path></svg>
               </div>
               <h1 style="font-size: var(--fs-xl);">Check your email</h1>
               <p class="mt-2">We sent a confirmation link to</p>

@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edit profile | Analytical</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .edit-head h1 {
+      font-size: var(--fs-xl);
+    }
+
+    @media (min-width: 768px) {
+      .edit-head h1 { font-size: var(--fs-2xl); }
+    }
+
+    .edit-section {
+      margin-bottom: var(--sp-4);
+    }
+
+    .avatar-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--sp-4);
+    }
+
+    .avatar-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+    }
+
+    .counter {
+      text-align: right;
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .counter.is-over {
+      color: var(--danger);
+    }
+
+    .save-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-3);
+      align-items: center;
+    }
+
+    .stack > * + * {
+      margin-top: var(--sp-4);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <!-- Shown while the login check runs -->
+    <div class="loading-block" id="loading-view" style="min-height: 60vh;">
+      <div class="spinner spinner-lg" role="status" aria-label="Loading your profile"></div>
+    </div>
+
+    <!-- Profile could not be loaded -->
+    <div class="container hidden" id="error-view" style="padding-block: var(--sp-12);">
+      <div class="empty-state">
+        <h2>Could not load your profile</h2>
+        <p>Please refresh the page. If this keeps happening, log out and log in again.</p>
+        <button class="btn btn-primary" type="button" onclick="window.location.reload()">Refresh</button>
+      </div>
+    </div>
+
+    <!-- The editor -->
+    <div class="dash-layout hidden" id="edit-view">
+
+      <aside class="dash-sidebar" aria-label="Dashboard menu">
+        <a class="side-link" href="/pages/dashboard/index.html">Overview</a>
+        <a class="side-link" href="/pages/profile/view.html">My profile</a>
+        <a class="side-link active" href="/pages/profile/edit.html" aria-current="page">Edit profile</a>
+        <button class="side-link" type="button" data-logout>Log out</button>
+      </aside>
+
+      <div class="dash-content">
+        <div class="stack" style="max-width: 720px;">
+
+          <div class="edit-head">
+            <span class="section-eyebrow">Profile</span>
+            <h1>Edit your profile</h1>
+            <p class="mt-2">This is what other members see on your public profile.</p>
+          </div>
+
+          <div class="alert alert-danger hidden" id="form-error" role="alert"></div>
+
+          <form id="profile-form" novalidate>
+
+            <!-- Photo -->
+            <div class="card edit-section">
+              <div class="card-head">
+                <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Photo</h2>
+              </div>
+              <div class="card-body">
+                <div class="avatar-row">
+                  <span class="avatar avatar-xl" id="avatar-preview">?</span>
+
+                  <div>
+                    <div class="avatar-buttons">
+                      <button class="btn btn-secondary btn-sm" type="button" id="choose-photo">Choose photo</button>
+                      <button class="btn btn-ghost btn-sm hidden" type="button" id="remove-photo">Remove photo</button>
+                    </div>
+                    <p class="form-hint mt-2">JPG, PNG or WebP. Up to <span id="avatar-max">2</span> MB.</p>
+                    <p class="form-error hidden" id="avatar-error"></p>
+                  </div>
+                </div>
+                <input type="file" id="avatar-file" accept="image/jpeg,image/png,image/webp" class="hidden">
+              </div>
+            </div>
+
+            <!-- Basics -->
+            <div class="card edit-section">
+              <div class="card-head">
+                <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Basics</h2>
+              </div>
+              <div class="card-body">
+
+                <div class="form-group">
+                  <label class="form-label" for="username">Username</label>
+                  <input class="input" id="username" type="text" disabled>
+                  <p class="form-hint">Your username cannot be changed.</p>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="full-name">Full name <span class="req">*</span></label>
+                  <input class="input" id="full-name" type="text" autocomplete="name" maxlength="80">
+                  <p class="form-error hidden" id="full-name-error"></p>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="headline">Headline</label>
+                  <input class="input" id="headline" type="text" maxlength="100"
+                         placeholder="e.g. Data analyst focused on SQL and Power BI">
+                  <p class="form-error hidden" id="headline-error"></p>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="bio">Bio</label>
+                  <textarea class="textarea" id="bio" maxlength="280"
+                            placeholder="Tell people a little about yourself and your work."></textarea>
+                  <div class="counter" id="bio-counter">0 / 280</div>
+                  <p class="form-error hidden" id="bio-error"></p>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" for="country">Country</label>
+                  <select class="select" id="country" autocomplete="country"></select>
+                  <p class="form-error hidden" id="country-error"></p>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Skills -->
+            <div class="card edit-section">
+              <div class="card-head">
+                <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Skills</h2>
+              </div>
+              <div class="card-body">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" for="skills">Your skills</label>
+                  <input class="input" id="skills" type="text" autocapitalize="none"
+                         placeholder="e.g. SQL, Power BI, Python, Excel">
+                  <p class="form-hint">Separate skills with commas. Up to 30 skills, 30 characters each.</p>
+                  <div class="tag-list mt-2" id="skills-preview"></div>
+                  <p class="form-error hidden" id="skills-error"></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Links -->
+            <div class="card edit-section">
+              <div class="card-head">
+                <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Links</h2>
+              </div>
+              <div class="card-body">
+
+                <div class="form-group">
+                  <label class="form-label" for="website">Website</label>
+                  <input class="input" id="website" type="url" autocapitalize="none" maxlength="200"
+                         placeholder="https://yourwebsite.com">
+                  <p class="form-error hidden" id="website-error"></p>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="github">GitHub</label>
+                  <input class="input" id="github" type="url" autocapitalize="none" maxlength="200"
+                         placeholder="https://github.com/yourname">
+                  <p class="form-error hidden" id="github-error"></p>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" for="linkedin">LinkedIn</label>
+                  <input class="input" id="linkedin" type="url" autocapitalize="none" maxlength="200"
+                         placeholder="https://linkedin.com/in/yourname">
+                  <p class="form-error hidden" id="linkedin-error"></p>
+                </div>
+
+              </div>
+            </div>
+
+            <div class="save-bar">
+              <button class="btn btn-primary btn-lg" type="submit" id="save-btn">Save changes</button>
+              <a class="btn btn-secondary btn-lg" href="/pages/profile/view.html">View profile</a>
+            </div>
+
+          </form>
+
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- Edit profile behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Auth || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var limits = APP_CONFIG.limits;
+    var BUCKET = 'avatars';
+
+    var user = null;
+    var profile = null;
+
+    var dirty = false;
+    var newFile = null;        // a photo chosen but not saved yet
+    var newFileUrl = '';       // temporary preview address for that photo
+    var removeAvatar = false;  // the person tapped "Remove photo"
+
+    var form = $('profile-form');
+    var saveBtn = $('save-btn');
+    var formError = $('form-error');
+
+    var fullNameInput = $('full-name');
+    var headlineInput = $('headline');
+    var bioInput = $('bio');
+    var countryInput = $('country');
+    var skillsInput = $('skills');
+    var websiteInput = $('website');
+    var githubInput = $('github');
+    var linkedinInput = $('linkedin');
+
+    var avatarPreview = $('avatar-preview');
+    var avatarFile = $('avatar-file');
+    var avatarError = $('avatar-error');
+    var removeBtn = $('remove-photo');
+
+    /* ---------- Avatar preview ---------- */
+    function displayName() {
+      return fullNameInput.value.trim() || (profile && profile.username) || '';
+    }
+
+    function renderAvatarPreview() {
+      avatarPreview.innerHTML = '';
+
+      var source = '';
+      if (newFileUrl) source = newFileUrl;
+      else if (!removeAvatar && profile && profile.avatar_url) source = Utils.safeUrl(profile.avatar_url);
+
+      if (source) {
+        var img = document.createElement('img');
+        img.src = source;
+        img.alt = '';
+        img.addEventListener('error', function () {
+          avatarPreview.textContent = Utils.initials(displayName());
+        });
+        avatarPreview.appendChild(img);
+      } else {
+        avatarPreview.textContent = Utils.initials(displayName());
+      }
+
+      var hasPhoto = !!source;
+      removeBtn.classList.toggle('hidden', !hasPhoto);
+    }
+
+    function setAvatarError(message) {
+      avatarError.textContent = message || '';
+      avatarError.classList.toggle('hidden', !message);
+    }
+
+    $('choose-photo').addEventListener('click', function () {
+      avatarFile.click();
+    });
+
+    avatarFile.addEventListener('change', function () {
+      var file = avatarFile.files && avatarFile.files[0];
+      if (!file) return;
+
+      var problem = Utils.validate.imageFile(file, limits.avatarMaxMB);
+      if (problem) {
+        setAvatarError(problem);
+        avatarFile.value = '';
+        return;
+      }
+
+      setAvatarError('');
+      if (newFileUrl) URL.revokeObjectURL(newFileUrl);
+
+      newFile = file;
+      newFileUrl = URL.createObjectURL(file);
+      removeAvatar = false;
+      dirty = true;
+      renderAvatarPreview();
+    });
+
+    removeBtn.addEventListener('click', function () {
+      if (newFileUrl) URL.revokeObjectURL(newFileUrl);
+      newFile = null;
+      newFileUrl = '';
+      avatarFile.value = '';
+      removeAvatar = true;
+      dirty = true;
+      setAvatarError('');
+      renderAvatarPreview();
+    });
+
+    fullNameInput.addEventListener('input', function () {
+      if (!newFileUrl && (removeAvatar || !(profile && profile.avatar_url))) renderAvatarPreview();
+    });
+
+    /* ---------- Bio counter ---------- */
+    function updateBioCounter() {
+      var length = bioInput.value.length;
+      var counter = $('bio-counter');
+      counter.textContent = length + ' / ' + limits.bioMaxChars;
+      counter.classList.toggle('is-over', length > limits.bioMaxChars);
+    }
+
+    bioInput.addEventListener('input', updateBioCounter);
+
+    /* ---------- Skills ---------- */
+    function parseSkills(text) {
+      var seen = {};
+      var out = [];
+
+      String(text || '').split(/[,\n]/).forEach(function (raw) {
+        var skill = raw.trim().replace(/\s+/g, ' ');
+        if (!skill) return;
+        var key = skill.toLowerCase();
+        if (seen[key]) return;
+        seen[key] = true;
+        out.push(skill);
+      });
+
+      return out;
+    }
+
+    function renderSkillsPreview() {
+      var wrap = $('skills-preview');
+      wrap.innerHTML = '';
+
+      parseSkills(skillsInput.value).forEach(function (skill) {
+        var tag = document.createElement('span');
+        tag.className = 'tag';
+        tag.textContent = skill;
+        wrap.appendChild(tag);
+      });
+    }
+
+    skillsInput.addEventListener('input', renderSkillsPreview);
+
+    /* ---------- Validation ---------- */
+    function checkHost(value, domains, example) {
+      var v = String(value || '').trim();
+      if (!v) return '';
+
+      var url = Utils.safeUrl(v);
+      if (!url) return 'Enter a full link starting with https://';
+
+      var host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+      var ok = domains.some(function (d) { return host === d || host.slice(-(d.length + 1)) === '.' + d; });
+
+      return ok ? '' : 'Enter a link like ' + example;
+    }
+
+    var rules = [
+      { input: fullNameInput, check: function () { return Utils.validate.fullName(fullNameInput.value); } },
+      {
+        input: headlineInput,
+        check: function () { return headlineInput.value.length > 100 ? 'Headline must be 100 characters or fewer.' : ''; }
+      },
+      { input: bioInput, check: function () { return Utils.validate.bio(bioInput.value); } },
+      {
+        input: skillsInput,
+        check: function () {
+          var list = parseSkills(skillsInput.value);
+          if (list.length > 30) return 'Add up to 30 skills.';
+          for (var i = 0; i < list.length; i++) {
+            if (list[i].length > 30) return 'Each skill must be 30 characters or fewer.';
+          }
+          return '';
+        }
+      },
+      { input: websiteInput, check: function () { return Utils.validate.optionalUrl(websiteInput.value); } },
+      {
+        input: githubInput,
+        check: function () { return checkHost(githubInput.value, ['github.com'], 'https://github.com/yourname'); }
+      },
+      {
+        input: linkedinInput,
+        check: function () { return checkHost(linkedinInput.value, ['linkedin.com'], 'https://linkedin.com/in/yourname'); }
+      }
+    ];
+
+    rules.forEach(function (rule) {
+      rule.input.addEventListener('blur', function () {
+        Utils.showFieldError(rule.input, rule.check());
+      });
+
+      rule.input.addEventListener('input', function () {
+        if (rule.input.classList.contains('is-invalid')) {
+          Utils.showFieldError(rule.input, rule.check());
+        }
+      });
+    });
+
+    function validateAll() {
+      var firstBad = null;
+
+      rules.forEach(function (rule) {
+        var message = rule.check();
+        Utils.showFieldError(rule.input, message);
+        if (message && !firstBad) firstBad = rule.input;
+      });
+
+      if (firstBad) firstBad.focus();
+      return !firstBad;
+    }
+
+    function showFormError(message) {
+      formError.textContent = message;
+      formError.classList.remove('hidden');
+      formError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    /* ---------- Unsaved changes warning ---------- */
+    form.addEventListener('input', function () { dirty = true; });
+    form.addEventListener('change', function () { dirty = true; });
+
+    window.addEventListener('beforeunload', function (e) {
+      if (!dirty) return;
+      e.preventDefault();
+      e.returnValue = '';
+    });
+
+    /* ---------- Storage helpers ---------- */
+    function extensionFor(file) {
+      if (file.type === 'image/png') return 'png';
+      if (file.type === 'image/webp') return 'webp';
+      return 'jpg';
+    }
+
+    // Turns a stored public address back into a path inside the bucket.
+    // Only paths inside this member's own folder are ever returned.
+    function pathFromUrl(url) {
+      var text = String(url || '');
+      var marker = '/' + BUCKET + '/';
+      var index = text.indexOf(marker);
+      if (index === -1) return '';
+
+      var path = '';
+      try {
+        path = decodeURIComponent(text.slice(index + marker.length).split('?')[0]);
+      } catch (e) {
+        return '';
+      }
+
+      return path.indexOf(user.id + '/') === 0 ? path : '';
+    }
+
+    async function removeStoredFile(url) {
+      var path = pathFromUrl(url);
+      if (!path) return;
+
+      var result = await sb.storage.from(BUCKET).remove([path]);
+      if (result.error) console.error('[Analytical] Could not delete old photo:', result.error);
+    }
+
+    /* ---------- Save ---------- */
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      formError.classList.add('hidden');
+
+      if (!validateAll()) return;
+
+      UI.setLoading(saveBtn, true);
+
+      var oldAvatarUrl = profile.avatar_url || '';
+      var avatarUrl = oldAvatarUrl;
+      var uploadedPath = '';
+
+      /* 1. Upload a new photo, if one was chosen */
+      if (newFile) {
+        var path = user.id + '/' + Date.now() + '.' + extensionFor(newFile);
+
+        var upload = await sb.storage.from(BUCKET).upload(path, newFile, {
+          contentType: newFile.type,
+          cacheControl: '31536000',
+          upsert: false
+        });
+
+        if (upload.error) {
+          UI.setLoading(saveBtn, false);
+          showFormError('Could not upload your photo. ' + sbHelpers.friendlyError(upload.error));
+          return;
+        }
+
+        uploadedPath = path;
+        avatarUrl = sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+      } else if (removeAvatar) {
+        avatarUrl = null;
+      }
+
+      /* 2. Save the profile */
+      var update = {
+        full_name: fullNameInput.value.trim(),
+        headline: headlineInput.value.trim() || null,
+        bio: bioInput.value.trim() || null,
+        country: countryInput.value || null,
+        skills: parseSkills(skillsInput.value),
+        website_url: Utils.safeUrl(websiteInput.value) || null,
+        github_url: Utils.safeUrl(githubInput.value) || null,
+        linkedin_url: Utils.safeUrl(linkedinInput.value) || null,
+        avatar_url: avatarUrl
+      };
+
+      var result = await sb.from('profiles').update(update).eq('id', user.id).select().single();
+
+      if (result.error) {
+        // Do not leave an unused photo behind
+        if (uploadedPath) await sb.storage.from(BUCKET).remove([uploadedPath]);
+
+        UI.setLoading(saveBtn, false);
+        showFormError(sbHelpers.friendlyError(result.error));
+        return;
+      }
+
+      /* 3. Tidy up the old photo */
+      if (oldAvatarUrl && oldAvatarUrl !== avatarUrl) {
+        await removeStoredFile(oldAvatarUrl);
+      }
+
+      profile = result.data;
+
+      if (newFileUrl) URL.revokeObjectURL(newFileUrl);
+      newFile = null;
+      newFileUrl = '';
+      removeAvatar = false;
+      avatarFile.value = '';
+      dirty = false;
+
+      renderAvatarPreview();
+      Auth.refreshNav();
+
+      UI.setLoading(saveBtn, false);
+      UI.toast.success('Profile saved.');
+    });
+
+    /* ---------- Fill the form ---------- */
+    function fill() {
+      $('username').value = '@' + profile.username;
+      fullNameInput.value = profile.full_name || '';
+      headlineInput.value = profile.headline || '';
+      bioInput.value = profile.bio || '';
+      skillsInput.value = Array.isArray(profile.skills) ? profile.skills.join(', ') : '';
+      websiteInput.value = profile.website_url || '';
+      githubInput.value = profile.github_url || '';
+      linkedinInput.value = profile.linkedin_url || '';
+
+      Utils.fillCountrySelect(countryInput, profile.country || '');
+      $('avatar-max').textContent = String(limits.avatarMaxMB);
+
+      bioInput.maxLength = limits.bioMaxChars;
+      updateBioCounter();
+      renderSkillsPreview();
+      renderAvatarPreview();
+
+      dirty = false;
+    }
+
+    /* ---------- Protect the page, then show it ---------- */
+    async function start() {
+      var context = await Auth.requireAuth();
+      if (!context) return; // not logged in: sent to the login page
+
+      user = context.user;
+      profile = context.profile;
+
+      $('loading-view').classList.add('hidden');
+
+      if (!profile) {
+        $('error-view').classList.remove('hidden');
+        return;
+      }
+
+      fill();
+      $('edit-view').classList.remove('hidden');
+    }
+
+    start();
+  })();
+</script>
+</body>
+</html>

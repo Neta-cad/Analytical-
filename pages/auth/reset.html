@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Choose a new password | Analytical</title>
+  <meta name="description" content="Choose a new password for your Analytical account.">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Remember how the page was opened, before the Supabase library
+       cleans the link tokens out of the address bar -->
+  <script>
+    window.__initialHash = window.location.hash || '';
+    window.__initialSearch = window.location.search || '';
+  </script>
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .auth-title {
+      font-size: var(--fs-xl);
+      margin-bottom: var(--sp-1);
+    }
+
+    .auth-sub {
+      margin-bottom: var(--sp-5);
+      font-size: var(--fs-sm);
+    }
+
+    .confirm-panel {
+      text-align: center;
+    }
+
+    .confirm-icon {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto var(--sp-4);
+      border-radius: var(--radius-full);
+      display: grid;
+      place-items: center;
+      background: rgba(212, 175, 55, 0.14);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: var(--brand-400);
+    }
+
+    .confirm-icon.is-danger {
+      background: var(--danger-bg);
+      border-color: rgba(229, 88, 79, 0.35);
+      color: var(--danger);
+    }
+
+    [data-theme="light"] .confirm-icon:not(.is-danger) {
+      background: var(--brand-50);
+      border-color: var(--brand-200);
+      color: var(--brand-800);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+    <div class="auth-card-wrap" style="min-height: calc(100vh - var(--nav-height));">
+      <div class="card auth-card">
+        <div class="card-body">
+
+          <!-- Checking the link -->
+          <div class="loading-block" id="loading-view">
+            <div class="spinner spinner-lg" role="status" aria-label="Checking your link"></div>
+          </div>
+
+          <!-- New password form -->
+          <div class="hidden" id="form-view">
+            <h1 class="auth-title">Choose a new password</h1>
+            <p class="auth-sub">Pick a strong password you have not used before.</p>
+
+            <div class="alert alert-danger hidden" id="form-error" role="alert"></div>
+
+            <form id="reset-form" novalidate>
+              <div class="form-group">
+                <label class="form-label" for="password">New password</label>
+                <input class="input" id="password" name="password" type="password"
+                       autocomplete="new-password" maxlength="72" placeholder="At least 8 characters">
+                <p class="form-hint">At least 8 characters, with a letter and a number.</p>
+                <p class="form-error hidden" id="password-error"></p>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="confirm">Confirm new password</label>
+                <input class="input" id="confirm" name="confirm" type="password"
+                       autocomplete="new-password" maxlength="72" placeholder="Type it again">
+                <p class="form-error hidden" id="confirm-error"></p>
+              </div>
+
+              <div class="form-group">
+                <label class="check" for="show-passwords">
+                  <input type="checkbox" id="show-passwords">
+                  <span>Show passwords</span>
+                </label>
+              </div>
+
+              <button class="btn btn-primary btn-lg btn-block" type="submit" id="submit-btn">Update password</button>
+            </form>
+          </div>
+
+          <!-- Link is invalid or expired -->
+          <div class="confirm-panel hidden" id="invalid-view">
+            <div class="confirm-icon is-danger">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+            </div>
+            <h1 style="font-size: var(--fs-xl);">This link will not work</h1>
+            <p class="mt-2 text-sm">The reset link has expired, was already used, or was not opened from your email. Request a new one and open it straight away.</p>
+            <div class="mt-6" style="display: grid; gap: var(--sp-2);">
+              <a class="btn btn-primary btn-block" href="/pages/auth/forgot.html">Request a new link</a>
+              <a class="btn btn-secondary btn-block" href="/pages/auth/login.html">Back to log in</a>
+            </div>
+          </div>
+
+          <!-- Password changed -->
+          <div class="confirm-panel hidden" id="done-view">
+            <div class="confirm-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
+            </div>
+            <h1 style="font-size: var(--fs-xl);">Password updated</h1>
+            <p class="mt-2 text-sm">Your password has been changed and you are logged in.</p>
+            <div class="mt-6" style="display: grid;">
+              <a class="btn btn-primary btn-block" href="/pages/dashboard/index.html">Continue</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- Reset password behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Auth || !window.sbHelpers) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var views = {
+      loading: $('loading-view'),
+      form: $('form-view'),
+      invalid: $('invalid-view'),
+      done: $('done-view')
+    };
+
+    var currentView = 'loading';
+
+    function showView(name) {
+      currentView = name;
+      Object.keys(views).forEach(function (key) {
+        views[key].classList.toggle('hidden', key !== name);
+      });
+    }
+
+    /* ---------- Work out how the person arrived ---------- */
+    var initialHash = window.__initialHash || '';
+    var initialSearch = window.__initialSearch || '';
+    var hashParams = new URLSearchParams(initialHash.replace(/^#/, ''));
+
+    var linkError = hashParams.get('error_description') || hashParams.get('error');
+    var looksLikeRecovery =
+      hashParams.get('type') === 'recovery' || /[?&]code=/.test(initialSearch);
+
+    /* ---------- Show the form only for a real recovery session ---------- */
+    sbHelpers.onAuthChange(function (event) {
+      if (event === 'PASSWORD_RECOVERY' && currentView === 'loading') {
+        showView('form');
+      }
+    });
+
+    function checkSession(attempt) {
+      sbHelpers.getSession().then(function (session) {
+        if (currentView !== 'loading') return;
+
+        if (session) {
+          showView('form');
+        } else if (attempt < 8) {
+          setTimeout(function () { checkSession(attempt + 1); }, 400);
+        } else {
+          showView('invalid');
+        }
+      });
+    }
+
+    if (linkError) {
+      showView('invalid');
+    } else if (looksLikeRecovery) {
+      checkSession(0);
+    } else {
+      setTimeout(function () {
+        if (currentView === 'loading') showView('invalid');
+      }, 1500);
+    }
+
+    /* ---------- Form ---------- */
+    var form = $('reset-form');
+    var submitBtn = $('submit-btn');
+    var formError = $('form-error');
+    var passwordInput = $('password');
+    var confirmInput = $('confirm');
+
+    $('show-passwords').addEventListener('change', function () {
+      var type = this.checked ? 'text' : 'password';
+      passwordInput.type = type;
+      confirmInput.type = type;
+    });
+
+    function checkPassword() {
+      return Utils.validate.password(passwordInput.value);
+    }
+
+    function checkConfirm() {
+      if (!confirmInput.value) return 'Type your new password again.';
+      if (confirmInput.value !== passwordInput.value) return 'The two passwords do not match.';
+      return '';
+    }
+
+    passwordInput.addEventListener('blur', function () {
+      Utils.showFieldError(passwordInput, checkPassword());
+    });
+
+    confirmInput.addEventListener('blur', function () {
+      Utils.showFieldError(confirmInput, checkConfirm());
+    });
+
+    [passwordInput, confirmInput].forEach(function (input) {
+      input.addEventListener('input', function () {
+        if (passwordInput.classList.contains('is-invalid')) {
+          Utils.showFieldError(passwordInput, checkPassword());
+        }
+        if (confirmInput.classList.contains('is-invalid')) {
+          Utils.showFieldError(confirmInput, checkConfirm());
+        }
+      });
+    });
+
+    function showFormError(message) {
+      formError.textContent = message;
+      formError.classList.remove('hidden');
+    }
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      formError.classList.add('hidden');
+
+      var passwordProblem = checkPassword();
+      var confirmProblem = checkConfirm();
+
+      Utils.showFieldError(passwordInput, passwordProblem);
+      Utils.showFieldError(confirmInput, confirmProblem);
+
+      if (passwordProblem) { passwordInput.focus(); return; }
+      if (confirmProblem) { confirmInput.focus(); return; }
+
+      UI.setLoading(submitBtn, true);
+      var result = await Auth.updatePassword(passwordInput.value);
+      UI.setLoading(submitBtn, false);
+
+      if (!result.ok) {
+        showFormError(result.error);
+        return;
+      }
+
+      passwordInput.value = '';
+      confirmInput.value = '';
+      showView('done');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  })();
+</script>
+</body>
+</html>

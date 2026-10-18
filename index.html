@@ -1,21 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Analytical | Where the world's tech people build, learn and earn</title>
   <meta name="description" content="Analytical is a global home for coders, data analysts, data scientists and tech creators to sell projects, find jobs, learn and solve problems together.">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#0a0a0a">
 
-  <!-- Apply the saved theme before the page paints, so there is no flash -->
+  <!-- Black is the default theme. A saved choice is respected. -->
   <script>
     (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
       try {
-        var saved = localStorage.getItem('analytical-theme');
+        var saved = localStorage.getItem(key);
         if (saved === 'light' || saved === 'dark') {
-          document.documentElement.setAttribute('data-theme', saved);
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
         }
-      } catch (e) { /* storage blocked: fall back to the device setting */ }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
     })();
   </script>
 
@@ -25,35 +30,48 @@
 
   <style>
     /* Styles used only on the home page */
+
+    /* ----- Hero ----- */
     .hero {
-      padding-block: var(--sp-16) var(--sp-12);
+      padding-block: var(--sp-12) var(--sp-10);
       text-align: center;
       border-bottom: 1px solid var(--border);
       background:
-        radial-gradient(1100px 480px at 50% -10%, rgba(99, 102, 241, 0.18), transparent 60%),
+        radial-gradient(900px 380px at 50% -20%, rgba(212, 175, 55, 0.16), transparent 65%),
         var(--bg);
     }
 
     .hero-inner {
-      max-width: 780px;
+      max-width: 720px;
       margin-inline: auto;
+    }
+
+    .hero-rule {
+      width: 44px;
+      height: 2px;
+      margin: var(--sp-4) auto;
+      background: var(--gold-gradient);
+      border-radius: 2px;
     }
 
     .hero h1 {
-      margin: var(--sp-3) 0 var(--sp-4);
+      font-size: clamp(1.9rem, 6vw, 2.9rem);
+      line-height: 1.12;
+      letter-spacing: -0.015em;
     }
 
     .hero h1 .grad {
-      background: linear-gradient(90deg, var(--brand-500), var(--accent));
+      background: var(--gold-gradient);
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
+      -webkit-text-fill-color: transparent;
     }
 
     .hero .lead {
-      font-size: var(--fs-md);
-      max-width: 620px;
-      margin-inline: auto;
+      font-size: var(--fs-base);
+      max-width: 560px;
+      margin: var(--sp-4) auto 0;
     }
 
     .hero-actions {
@@ -64,17 +82,17 @@
       margin-top: var(--sp-6);
     }
 
+    /* ----- Module cards ----- */
     .module-card {
       display: flex;
       flex-direction: column;
-      gap: var(--sp-3);
+      gap: var(--sp-2);
       padding: var(--sp-5);
       height: 100%;
       color: inherit;
     }
 
     .module-card:hover { color: inherit; }
-
     .module-card[aria-disabled="true"] { cursor: default; }
 
     .module-top {
@@ -82,56 +100,115 @@
       align-items: center;
       justify-content: space-between;
       gap: var(--sp-3);
+      margin-bottom: var(--sp-1);
     }
 
     .module-icon {
-      width: 44px;
-      height: 44px;
+      width: 40px;
+      height: 40px;
       border-radius: var(--radius);
       display: grid;
       place-items: center;
-      background: var(--brand-50);
-      color: var(--brand-600);
+      background: rgba(212, 175, 55, 0.12);
+      border: 1px solid rgba(212, 175, 55, 0.28);
+      color: var(--brand-400);
     }
 
-    [data-theme="dark"] .module-icon {
-      background: rgba(99, 102, 241, 0.18);
-      color: var(--brand-300);
+    .module-card h3 {
+      font-size: var(--fs-md);
     }
 
-    .module-card h3 { font-size: var(--fs-md); }
-
-    .step-number {
-      width: 36px;
-      height: 36px;
-      border-radius: var(--radius-full);
-      display: grid;
-      place-items: center;
-      background: var(--brand-600);
-      color: #fff;
-      font-weight: 700;
+    .module-card p {
       font-size: var(--fs-sm);
     }
 
+    /* ----- Audience list ----- */
+    .audience-item {
+      padding: var(--sp-4) var(--sp-5);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--brand-600);
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+
+    .audience-item h3 {
+      font-family: var(--font-sans);
+      font-size: var(--fs-base);
+      font-weight: 600;
+      margin-bottom: var(--sp-1);
+    }
+
+    .audience-item p {
+      font-size: var(--fs-sm);
+    }
+
+    /* ----- Steps ----- */
+    .step-card {
+      padding: var(--sp-5);
+    }
+
+    .step-num {
+      font-family: var(--font-display);
+      font-size: 1.75rem;
+      font-weight: 600;
+      line-height: 1;
+      color: var(--brand-500);
+    }
+
+    .step-card h3 {
+      font-size: var(--fs-md);
+      margin: var(--sp-2) 0 var(--sp-1);
+    }
+
+    .step-card p {
+      font-size: var(--fs-sm);
+    }
+
+    /* ----- Closing call to action (stays black in both themes) ----- */
     .cta-band {
       border-radius: var(--radius-xl);
       padding: var(--sp-10) var(--sp-5);
       text-align: center;
-      background: linear-gradient(135deg, var(--brand-700), var(--brand-900));
+      background:
+        radial-gradient(520px 260px at 50% 0%, rgba(212, 175, 55, 0.2), transparent 65%),
+        #0a0a0a;
+      border: 1px solid var(--brand-800);
     }
 
-    .cta-band h2,
-    .cta-band p { color: #fff; }
+    .cta-band h2 { color: #f2eee3; }
 
     .cta-band p {
-      opacity: 0.88;
-      max-width: 560px;
-      margin: var(--sp-3) auto 0;
+      color: #bfb8a7;
+      max-width: 520px;
+      margin: var(--sp-2) auto 0;
     }
 
     @media (min-width: 768px) {
-      .hero { padding-block: var(--sp-20) var(--sp-16); }
-      .cta-band { padding: var(--sp-16) var(--sp-8); }
+      .hero { padding-block: var(--sp-16) var(--sp-12); }
+      .cta-band { padding: var(--sp-12) var(--sp-8); }
+    }
+
+    /* ----- Light theme adjustments ----- */
+    [data-theme="light"] .hero {
+      background:
+        radial-gradient(900px 380px at 50% -20%, rgba(184, 148, 31, 0.14), transparent 65%),
+        var(--bg);
+    }
+
+    [data-theme="light"] .hero h1 .grad {
+      background: none;
+      color: var(--brand-800);
+      -webkit-text-fill-color: var(--brand-800);
+    }
+
+    [data-theme="light"] .module-icon {
+      background: var(--brand-50);
+      border-color: var(--brand-200);
+      color: var(--brand-800);
+    }
+
+    [data-theme="light"] .step-num {
+      color: var(--brand-700);
     }
   </style>
 </head>
@@ -147,7 +224,8 @@
     <section class="hero">
       <div class="container">
         <div class="hero-inner">
-          <span class="badge badge-brand">Built for tech people, everywhere</span>
+          <span class="badge badge-brand">For tech people, everywhere</span>
+          <div class="hero-rule"></div>
           <h1>Where the world's tech people <span class="grad">build, learn and earn.</span></h1>
           <p class="lead">
             Coders, data analysts, data scientists and creators in one place. Share your work,
@@ -168,7 +246,7 @@
     </section>
 
     <!-- Real member count: shown only once there are members -->
-    <section class="hidden" id="home-stats" style="padding-top: var(--sp-8);">
+    <section class="hidden" id="home-stats" style="padding-top: var(--sp-6);">
       <div class="container">
         <div class="card">
           <div class="card-body stat-card text-center">
@@ -195,7 +273,7 @@
           <a class="card module-card" data-module-card="marketplace" data-href="/pages/marketplace/browse.html" aria-disabled="true">
             <div class="module-top">
               <span class="module-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
               </span>
               <span class="badge" data-module-badge>Coming soon</span>
             </div>
@@ -206,7 +284,7 @@
           <a class="card module-card" data-module-card="jobs" data-href="/pages/jobs/browse.html" aria-disabled="true">
             <div class="module-top">
               <span class="module-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
               </span>
               <span class="badge" data-module-badge>Coming soon</span>
             </div>
@@ -217,7 +295,7 @@
           <a class="card module-card" data-module-card="qa" data-href="/pages/qa/index.html" aria-disabled="true">
             <div class="module-top">
               <span class="module-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"></path></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"></path></svg>
               </span>
               <span class="badge" data-module-badge>Coming soon</span>
             </div>
@@ -228,7 +306,7 @@
           <a class="card module-card" data-module-card="learn" data-href="/pages/learn/courses.html" aria-disabled="true">
             <div class="module-top">
               <span class="module-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>
               </span>
               <span class="badge" data-module-badge>Coming soon</span>
             </div>
@@ -239,7 +317,7 @@
           <a class="card module-card" data-module-card="community" data-href="/pages/community/groups.html" aria-disabled="true">
             <div class="module-top">
               <span class="module-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
               </span>
               <span class="badge" data-module-badge>Coming soon</span>
             </div>
@@ -250,7 +328,7 @@
           <a class="card module-card" data-module-card="data" data-href="/pages/data/datasets.html" aria-disabled="true">
             <div class="module-top">
               <span class="module-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20v-4"></path></svg>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V10"></path><path d="M18 20V4"></path><path d="M6 20v-4"></path></svg>
               </span>
               <span class="badge" data-module-badge>Coming soon</span>
             </div>
@@ -273,30 +351,30 @@
         </div>
 
         <div class="grid-3">
-          <div class="card"><div class="card-body">
-            <h3 class="card-title">Developers</h3>
+          <div class="audience-item">
+            <h3>Developers</h3>
             <p>Showcase what you have built, sell code and templates, and find work that fits your skills.</p>
-          </div></div>
-          <div class="card"><div class="card-body">
-            <h3 class="card-title">Data analysts and scientists</h3>
+          </div>
+          <div class="audience-item">
+            <h3>Data analysts and scientists</h3>
             <p>Share datasets, notebooks and dashboards, and connect with people who need data skills.</p>
-          </div></div>
-          <div class="card"><div class="card-body">
-            <h3 class="card-title">Designers and creators</h3>
+          </div>
+          <div class="audience-item">
+            <h3>Designers and creators</h3>
             <p>Publish your portfolio, offer your work and collaborate with builders across the world.</p>
-          </div></div>
-          <div class="card"><div class="card-body">
-            <h3 class="card-title">Tutors and mentors</h3>
+          </div>
+          <div class="audience-item">
+            <h3>Tutors and mentors</h3>
             <p>Teach what you know, help beginners get started and earn from your experience.</p>
-          </div></div>
-          <div class="card"><div class="card-body">
-            <h3 class="card-title">Employers and recruiters</h3>
+          </div>
+          <div class="audience-item">
+            <h3>Employers and recruiters</h3>
             <p>Reach skilled people directly, review real portfolios and hire with confidence.</p>
-          </div></div>
-          <div class="card"><div class="card-body">
-            <h3 class="card-title">Learners</h3>
+          </div>
+          <div class="audience-item">
+            <h3>Learners</h3>
             <p>Ask questions, follow courses and grow your skills alongside people already in the field.</p>
-          </div></div>
+          </div>
         </div>
       </div>
     </section>
@@ -312,38 +390,38 @@
         </div>
 
         <div class="grid-3">
-          <div class="card"><div class="card-body">
-            <span class="step-number">1</span>
-            <h3 class="card-title mt-4">Create a free account</h3>
+          <div class="card step-card">
+            <span class="step-num">01</span>
+            <h3>Create a free account</h3>
             <p>Sign up with your email and confirm it. It takes about a minute.</p>
-          </div></div>
-          <div class="card"><div class="card-body">
-            <span class="step-number">2</span>
-            <h3 class="card-title mt-4">Build your profile</h3>
+          </div>
+          <div class="card step-card">
+            <span class="step-num">02</span>
+            <h3>Build your profile</h3>
             <p>Add your skills, links and a short bio so people can find and trust you.</p>
-          </div></div>
-          <div class="card"><div class="card-body">
-            <span class="step-number">3</span>
-            <h3 class="card-title mt-4">Grow with the community</h3>
+          </div>
+          <div class="card step-card">
+            <span class="step-num">03</span>
+            <h3>Grow with the community</h3>
             <p>As each module opens, you will already have your account and reputation ready.</p>
-          </div></div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- Final call to action -->
-    <section style="padding-bottom: var(--sp-8);">
+    <!-- Closing call to action -->
+    <section style="padding-bottom: var(--sp-4);">
       <div class="container">
         <div class="cta-band">
           <h2>Join Analytical today</h2>
           <p>Create your profile now and be part of the community from the start.</p>
 
           <div class="hero-actions" data-auth="out">
-            <a class="btn btn-secondary btn-lg" href="/pages/auth/register.html">Create free account</a>
+            <a class="btn btn-primary btn-lg" href="/pages/auth/register.html">Create free account</a>
           </div>
 
           <div class="hero-actions hidden" data-auth="in">
-            <a class="btn btn-secondary btn-lg" href="/pages/dashboard/index.html">Go to dashboard</a>
+            <a class="btn btn-primary btn-lg" href="/pages/dashboard/index.html">Go to dashboard</a>
           </div>
         </div>
       </div>
@@ -384,7 +462,7 @@
       var badge = card.querySelector('[data-module-badge]');
       if (badge) {
         badge.textContent = 'Open';
-        badge.className = 'badge badge-success';
+        badge.className = 'badge badge-brand';
       }
     });
 

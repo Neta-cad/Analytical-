@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Search | Analytical</title>
+  <meta name="description" content="Find tech people on Analytical by name, username, headline or skill.">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .filter-row {
+      display: grid;
+      gap: var(--sp-3);
+      grid-template-columns: 1fr;
+      margin-top: var(--sp-3);
+    }
+
+    @media (min-width: 640px) {
+      .filter-row { grid-template-columns: 1fr 1fr; max-width: 520px; }
+    }
+
+    .member-card {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-3);
+      padding: var(--sp-5);
+      height: 100%;
+      color: inherit;
+    }
+
+    .member-card:hover { color: inherit; }
+
+    .member-top {
+      display: flex;
+      align-items: center;
+      gap: var(--sp-3);
+      min-width: 0;
+    }
+
+    .member-id {
+      min-width: 0;
+    }
+
+    .member-name {
+      font-family: var(--font-sans);
+      font-size: var(--fs-base);
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
+    }
+
+    .member-username {
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .member-headline {
+      font-size: var(--fs-sm);
+      color: var(--text-soft);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .member-foot {
+      margin-top: auto;
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .result-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      margin-bottom: var(--sp-4);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <section class="page-header">
+      <div class="container">
+        <h1>Search</h1>
+        <p>Find tech people by name, username, headline or skill.</p>
+
+        <form class="search-bar mt-4" id="search-form" role="search" novalidate style="max-width: 640px;">
+          <div class="input-group">
+            <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+            <input class="input" id="q" name="q" type="search" maxlength="60"
+                   autocomplete="off" autocapitalize="none"
+                   placeholder="Try a name, a username or a skill like SQL" aria-label="Search">
+          </div>
+          <button class="btn btn-primary" type="submit">Search</button>
+        </form>
+
+        <div class="filter-row">
+          <div>
+            <label class="sr-only" for="country">Country</label>
+            <select class="select" id="country"></select>
+          </div>
+          <div>
+            <label class="sr-only" for="sort">Sort by</label>
+            <select class="select" id="sort">
+              <option value="newest">Newest members</option>
+              <option value="reputation">Highest reputation</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section style="padding-block: var(--sp-6);">
+      <div class="container">
+
+        <div class="result-bar">
+          <p class="text-sm" id="result-count" aria-live="polite"></p>
+        </div>
+
+        <div class="loading-block" id="loading-view">
+          <div class="spinner spinner-lg" role="status" aria-label="Searching"></div>
+        </div>
+
+        <div class="grid-3 hidden" id="results"></div>
+
+        <div class="empty-state hidden" id="empty-view">
+          <h3 id="empty-title">No results</h3>
+          <p id="empty-text"></p>
+          <a class="btn btn-primary hidden" id="empty-action" href="/pages/auth/register.html">Create an account</a>
+        </div>
+
+        <div class="pagination hidden" id="pagination" aria-label="Pages"></div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- Search behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var PAGE_SIZE = 12;
+    var COLUMNS = 'id, username, full_name, headline, avatar_url, country, skills, reputation, is_verified, created_at';
+
+    var qInput = $('q');
+    var countrySelect = $('country');
+    var sortSelect = $('sort');
+
+    var state = { q: '', country: '', sort: 'newest', page: 1 };
+    var requestId = 0;
+
+    /* ---------- Country filter ---------- */
+    Utils.fillCountrySelect(countrySelect, '');
+    countrySelect.options[0].textContent = 'All countries';
+
+    /* ---------- Read and write the address ---------- */
+    function readUrl() {
+      state.q = String(Utils.getParam('q') || '').slice(0, 60);
+
+      var country = String(Utils.getParam('country') || '').toUpperCase();
+      state.country = /^[A-Z]{2}$/.test(country) ? country : '';
+
+      state.sort = Utils.getParam('sort') === 'reputation' ? 'reputation' : 'newest';
+
+      var page = parseInt(Utils.getParam('page'), 10);
+      state.page = page > 0 ? page : 1;
+
+      qInput.value = state.q;
+      countrySelect.value = state.country;
+      sortSelect.value = state.sort;
+    }
+
+    function writeUrl() {
+      var params = new URLSearchParams();
+      if (state.q) params.set('q', state.q);
+      if (state.country) params.set('country', state.country);
+      if (state.sort !== 'newest') params.set('sort', state.sort);
+      if (state.page > 1) params.set('page', String(state.page));
+
+      var query = params.toString();
+      history.replaceState(null, '', window.location.pathname + (query ? '?' + query : ''));
+    }
+
+    /* ---------- Make the search term safe for the database filter ---------- */
+    function cleanTerm(raw) {
+      return String(raw || '')
+        .replace(/^@+/, '')
+        .replace(/[^\p{L}\p{N}\s\-]/gu, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 50);
+    }
+
+    function titleCase(text) {
+      return text.replace(/\b\p{L}/gu, function (c) { return c.toUpperCase(); });
+    }
+
+    function buildFilter(term) {
+      var parts = [
+        'username.ilike.%' + term + '%',
+        'full_name.ilike.%' + term + '%',
+        'headline.ilike.%' + term + '%'
+      ];
+
+      // Skills are stored as a list, so these match a whole skill name
+      var variants = [];
+      [term, term.toLowerCase(), term.toUpperCase(), titleCase(term)].forEach(function (v) {
+        if (variants.indexOf(v) === -1) variants.push(v);
+      });
+
+      variants.forEach(function (v) {
+        parts.push('skills.cs.{"' + v + '"}');
+      });
+
+      return parts.join(',');
+    }
+
+    /* ---------- Show the right part of the page ---------- */
+    function showState(name) {
+      $('loading-view').classList.toggle('hidden', name !== 'loading');
+      $('results').classList.toggle('hidden', name !== 'results');
+      $('empty-view').classList.toggle('hidden', name !== 'empty');
+      if (name !== 'results') $('pagination').classList.add('hidden');
+    }
+
+    /* ---------- Member card ---------- */
+    function buildCard(member) {
+      var name = member.full_name || member.username;
+
+      var card = document.createElement('a');
+      card.className = 'card card-hover member-card';
+      card.href = '/pages/profile/view.html?u=' + encodeURIComponent(member.username);
+
+      var top = document.createElement('div');
+      top.className = 'member-top';
+
+      var avatar = document.createElement('span');
+      avatar.className = 'avatar avatar-lg';
+      var avatarUrl = Utils.safeUrl(member.avatar_url);
+      if (avatarUrl) {
+        var img = document.createElement('img');
+        img.src = avatarUrl;
+        img.alt = '';
+        img.loading = 'lazy';
+        img.addEventListener('error', function () {
+          avatar.textContent = Utils.initials(name);
+        });
+        avatar.appendChild(img);
+      } else {
+        avatar.textContent = Utils.initials(name);
+      }
+
+      var id = document.createElement('div');
+      id.className = 'member-id';
+
+      var nameEl = document.createElement('div');
+      nameEl.className = 'member-name';
+      var nameText = document.createElement('span');
+      nameText.className = 'truncate';
+      nameText.textContent = name;
+      nameEl.appendChild(nameText);
+
+      if (member.is_verified) {
+        var verified = document.createElement('span');
+        verified.className = 'badge badge-brand';
+        verified.textContent = 'Verified';
+        nameEl.appendChild(verified);
+      }
+
+      var username = document.createElement('div');
+      username.className = 'member-username';
+      username.textContent = '@' + member.username;
+
+      id.appendChild(nameEl);
+      id.appendChild(username);
+      top.appendChild(avatar);
+      top.appendChild(id);
+      card.appendChild(top);
+
+      if (member.headline) {
+        var headline = document.createElement('p');
+        headline.className = 'member-headline';
+        headline.textContent = member.headline;
+        card.appendChild(headline);
+      }
+
+      var skills = Array.isArray(member.skills) ? member.skills.slice(0, 4) : [];
+      if (skills.length) {
+        var tags = document.createElement('div');
+        tags.className = 'tag-list';
+        skills.forEach(function (skill) {
+          var tag = document.createElement('span');
+          tag.className = 'tag';
+          tag.textContent = skill;
+          tags.appendChild(tag);
+        });
+        card.appendChild(tags);
+      }
+
+      var foot = document.createElement('div');
+      foot.className = 'member-foot';
+      var footBits = [];
+      if (member.country) footBits.push(Utils.countryName(member.country));
+      footBits.push('Joined ' + Utils.formatDate(member.created_at));
+      foot.textContent = footBits.join('  |  ');
+      card.appendChild(foot);
+
+      return card;
+    }
+
+    /* ---------- Pagination ---------- */
+    function pageButton(label, page, options) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'page-btn' + (options && options.active ? ' active' : '');
+      btn.textContent = label;
+      if (options && options.disabled) btn.disabled = true;
+      if (options && options.active) btn.setAttribute('aria-current', 'page');
+
+      btn.addEventListener('click', function () {
+        state.page = page;
+        run();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      return btn;
+    }
+
+    function renderPagination(total) {
+      var wrap = $('pagination');
+      wrap.innerHTML = '';
+
+      var pages = Math.ceil(total / PAGE_SIZE);
+      if (pages <= 1) {
+        wrap.classList.add('hidden');
+        return;
+      }
+
+      wrap.appendChild(pageButton('Previous', state.page - 1, { disabled: state.page <= 1 }));
+
+      var start = Math.max(1, state.page - 2);
+      var end = Math.min(pages, start + 4);
+      start = Math.max(1, end - 4);
+
+      for (var p = start; p <= end; p++) {
+        wrap.appendChild(pageButton(String(p), p, { active: p === state.page }));
+      }
+
+      wrap.appendChild(pageButton('Next', state.page + 1, { disabled: state.page >= pages }));
+      wrap.classList.remove('hidden');
+    }
+
+    /* ---------- Run the search ---------- */
+    async function run(isRetry) {
+      var id = ++requestId;
+      showState('loading');
+      writeUrl();
+
+      var term = cleanTerm(state.q);
+      var from = (state.page - 1) * PAGE_SIZE;
+
+      var query = sb.from('profiles').select(COLUMNS, { count: 'exact' });
+
+      if (term) query = query.or(buildFilter(term));
+      if (state.country) query = query.eq('country', state.country);
+
+      if (state.sort === 'reputation') {
+        query = query.order('reputation', { ascending: false }).order('created_at', { ascending: false });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+
+      var result = await query.range(from, from + PAGE_SIZE - 1);
+      if (id !== requestId) return; // a newer search is already running
+
+      if (result.error) {
+        // A page number beyond the last page: go back to page 1 once
+        if (!isRetry && state.page > 1) {
+          state.page = 1;
+          run(true);
+          return;
+        }
+
+        console.error('[Analytical] Search failed:', result.error);
+        $('result-count').textContent = '';
+        $('empty-title').textContent = 'Search is not available right now';
+        $('empty-text').textContent = sbHelpers.friendlyError(result.error);
+        $('empty-action').classList.add('hidden');
+        showState('empty');
+        return;
+      }
+
+      var members = result.data || [];
+      var total = result.count || 0;
+
+      if (!members.length) {
+        var filtering = !!(term || state.country);
+        $('result-count').textContent = '';
+
+        if (filtering) {
+          $('empty-title').textContent = 'No members found';
+          $('empty-text').textContent = 'Try a different word, check the spelling, or clear the country filter. Skill searches match the whole skill name, such as SQL or Python.';
+          $('empty-action').classList.add('hidden');
+        } else {
+          $('empty-title').textContent = 'No members yet';
+          $('empty-text').textContent = 'Be one of the first people on Analytical. Create your profile and it will appear here.';
+          $('empty-action').classList.remove('hidden');
+        }
+
+        showState('empty');
+        return;
+      }
+
+      var list = $('results');
+      list.innerHTML = '';
+      members.forEach(function (member) { list.appendChild(buildCard(member)); });
+
+      var first = from + 1;
+      var last = from + members.length;
+      $('result-count').textContent =
+        total <= PAGE_SIZE
+          ? total + (total === 1 ? ' member found' : ' members found')
+          : 'Showing ' + first + ' to ' + last + ' of ' + total + ' members';
+
+      showState('results');
+      renderPagination(total);
+    }
+
+    /* ---------- Events ---------- */
+    $('search-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      state.q = qInput.value.trim();
+      state.page = 1;
+      qInput.blur();
+      run();
+    });
+
+    countrySelect.addEventListener('change', function () {
+      state.country = countrySelect.value;
+      state.page = 1;
+      run();
+    });
+
+    sortSelect.addEventListener('change', function () {
+      state.sort = sortSelect.value;
+      state.page = 1;
+      run();
+    });
+
+    /* ---------- Start ---------- */
+    readUrl();
+    run();
+  })();
+</script>
+</body>
+</html>

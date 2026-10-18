@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Forgot password | Analytical</title>
+  <meta name="description" content="Reset your Analytical password.">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .auth-title {
+      font-size: var(--fs-xl);
+      margin-bottom: var(--sp-1);
+    }
+
+    .auth-sub {
+      margin-bottom: var(--sp-5);
+      font-size: var(--fs-sm);
+    }
+
+    .confirm-panel {
+      text-align: center;
+    }
+
+    .confirm-icon {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto var(--sp-4);
+      border-radius: var(--radius-full);
+      display: grid;
+      place-items: center;
+      background: rgba(212, 175, 55, 0.14);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: var(--brand-400);
+    }
+
+    [data-theme="light"] .confirm-icon {
+      background: var(--brand-50);
+      border-color: var(--brand-200);
+      color: var(--brand-800);
+    }
+
+    .confirm-email {
+      font-weight: 700;
+      color: var(--text);
+      word-break: break-all;
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+    <div class="auth-card-wrap" style="min-height: calc(100vh - var(--nav-height));">
+      <div class="card auth-card">
+        <div class="card-body">
+
+          <!-- Request form -->
+          <div id="request-view">
+            <h1 class="auth-title">Forgot your password?</h1>
+            <p class="auth-sub">Enter the email you signed up with and we will send you a link to choose a new password.</p>
+
+            <div class="alert alert-danger hidden" id="form-error" role="alert"></div>
+
+            <form id="forgot-form" novalidate>
+              <div class="form-group">
+                <label class="form-label" for="email">Email</label>
+                <input class="input" id="email" name="email" type="email"
+                       autocomplete="email" autocapitalize="none" inputmode="email"
+                       maxlength="254" placeholder="you@example.com">
+                <p class="form-error hidden" id="email-error"></p>
+              </div>
+
+              <button class="btn btn-primary btn-lg btn-block" type="submit" id="submit-btn">Send reset link</button>
+            </form>
+
+            <p class="text-center text-sm mt-6">
+              Remembered it?
+              <a href="/pages/auth/login.html" class="fw-600">Back to log in</a>
+            </p>
+          </div>
+
+          <!-- Shown after the request is sent -->
+          <div class="confirm-panel hidden" id="sent-view">
+            <div class="confirm-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-10 6L2 7"></path></svg>
+            </div>
+            <h1 style="font-size: var(--fs-xl);">Check your email</h1>
+            <p class="mt-2">If an account exists for</p>
+            <p class="confirm-email mt-1" id="sent-email"></p>
+            <p class="mt-2">we have sent a link to reset the password.</p>
+            <p class="mt-4 text-sm">The link works for a limited time. If you cannot find the email, check your spam folder.</p>
+
+            <div class="mt-6" style="display: grid; gap: var(--sp-2);">
+              <button class="btn btn-secondary btn-block" type="button" id="resend-btn">Send again</button>
+              <a class="btn btn-primary btn-block" href="/pages/auth/login.html">Back to log in</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- Forgot password behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Auth) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var form = $('forgot-form');
+    var submitBtn = $('submit-btn');
+    var formError = $('form-error');
+    var emailInput = $('email');
+    var resendBtn = $('resend-btn');
+
+    var sentTo = '';
+    var cooldownTimer = null;
+
+    function checkEmail() {
+      return Utils.validate.email(emailInput.value);
+    }
+
+    emailInput.addEventListener('blur', function () {
+      Utils.showFieldError(emailInput, checkEmail());
+    });
+
+    emailInput.addEventListener('input', function () {
+      if (emailInput.classList.contains('is-invalid')) {
+        Utils.showFieldError(emailInput, checkEmail());
+      }
+    });
+
+    function showFormError(message) {
+      formError.textContent = message;
+      formError.classList.remove('hidden');
+    }
+
+    function startCooldown(seconds) {
+      var left = seconds;
+      resendBtn.disabled = true;
+      resendBtn.textContent = 'Send again in ' + left + 's';
+
+      clearInterval(cooldownTimer);
+      cooldownTimer = setInterval(function () {
+        left--;
+        if (left <= 0) {
+          clearInterval(cooldownTimer);
+          resendBtn.disabled = false;
+          resendBtn.textContent = 'Send again';
+        } else {
+          resendBtn.textContent = 'Send again in ' + left + 's';
+        }
+      }, 1000);
+    }
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      formError.classList.add('hidden');
+
+      var problem = checkEmail();
+      Utils.showFieldError(emailInput, problem);
+      if (problem) { emailInput.focus(); return; }
+
+      UI.setLoading(submitBtn, true);
+      var result = await Auth.sendPasswordReset(emailInput.value);
+      UI.setLoading(submitBtn, false);
+
+      if (!result.ok) {
+        showFormError(result.error);
+        return;
+      }
+
+      sentTo = emailInput.value.trim().toLowerCase();
+      $('sent-email').textContent = sentTo;
+      $('request-view').classList.add('hidden');
+      $('sent-view').classList.remove('hidden');
+      startCooldown(60);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    resendBtn.addEventListener('click', async function () {
+      UI.setLoading(resendBtn, true);
+      var result = await Auth.sendPasswordReset(sentTo);
+      UI.setLoading(resendBtn, false);
+
+      if (result.ok) {
+        UI.toast.success('Reset link sent again.');
+        startCooldown(60);
+      } else {
+        UI.toast.error(result.error);
+      }
+    });
+  })();
+</script>
+</body>
+</html>

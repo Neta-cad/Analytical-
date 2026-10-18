@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profile | Analytical</title>
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .profile-hero {
+      background:
+        radial-gradient(760px 300px at 20% -30%, rgba(212, 175, 55, 0.14), transparent 65%),
+        var(--bg-soft);
+      border-bottom: 1px solid var(--border);
+      padding-block: var(--sp-8);
+    }
+
+    .profile-top {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-4);
+      align-items: flex-start;
+    }
+
+    .profile-id h1 {
+      font-size: var(--fs-xl);
+      margin-bottom: 2px;
+    }
+
+    .profile-username {
+      color: var(--text-muted);
+      font-size: var(--fs-sm);
+    }
+
+    .profile-headline {
+      margin-top: var(--sp-2);
+      color: var(--text);
+      font-size: var(--fs-base);
+    }
+
+    .profile-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+      margin-top: var(--sp-3);
+    }
+
+    .profile-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+    }
+
+    .bio-text {
+      white-space: pre-line;
+      word-break: break-word;
+      color: var(--text-soft);
+    }
+
+    .links-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+    }
+
+    .detail-list {
+      display: grid;
+      gap: var(--sp-3);
+      margin: 0;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: var(--sp-4);
+      padding-bottom: var(--sp-3);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .detail-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .detail-row dt {
+      font-size: var(--fs-sm);
+      color: var(--text-muted);
+    }
+
+    .detail-row dd {
+      margin: 0;
+      font-size: var(--fs-sm);
+      font-weight: 500;
+      text-align: right;
+    }
+
+    .stack > * + * {
+      margin-top: var(--sp-4);
+    }
+
+    @media (min-width: 640px) {
+      .profile-top {
+        flex-direction: row;
+        align-items: center;
+        gap: var(--sp-6);
+      }
+
+      .profile-actions {
+        margin-left: auto;
+      }
+
+      .profile-id h1 { font-size: var(--fs-2xl); }
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <!-- Loading -->
+    <div class="loading-block" id="loading-view" style="min-height: 60vh;">
+      <div class="spinner spinner-lg" role="status" aria-label="Loading profile"></div>
+    </div>
+
+    <!-- Profile not found -->
+    <div class="container hidden" id="notfound-view" style="padding-block: var(--sp-12);">
+      <div class="empty-state">
+        <h2>Profile not found</h2>
+        <p>We could not find that member. The username may be wrong, or the profile may have been removed.</p>
+        <a class="btn btn-primary" href="/index.html">Back to home</a>
+      </div>
+    </div>
+
+    <!-- The profile -->
+    <div class="hidden" id="profile-view">
+
+      <section class="profile-hero">
+        <div class="container">
+          <div class="profile-top">
+            <span class="avatar avatar-xl" id="profile-avatar">?</span>
+
+            <div class="profile-id">
+              <h1 id="profile-name">Member</h1>
+              <div class="profile-username" id="profile-username"></div>
+              <p class="profile-headline hidden" id="profile-headline"></p>
+              <div class="profile-badges" id="profile-badges"></div>
+            </div>
+
+            <div class="profile-actions">
+              <a class="btn btn-primary hidden" id="edit-btn" href="/pages/profile/edit.html">Edit profile</a>
+              <button class="btn btn-secondary" type="button" id="copy-btn">Copy profile link</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section style="padding-block: var(--sp-6);">
+        <div class="container">
+          <div class="with-sidebar sidebar-right">
+
+            <div class="stack">
+
+              <div class="card" id="bio-card">
+                <div class="card-head">
+                  <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">About</h2>
+                </div>
+                <div class="card-body">
+                  <p class="bio-text" id="bio-text"></p>
+                </div>
+              </div>
+
+              <div class="card" id="skills-card">
+                <div class="card-head">
+                  <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Skills</h2>
+                </div>
+                <div class="card-body">
+                  <div class="tag-list" id="skills-list"></div>
+                </div>
+              </div>
+
+              <div class="card" id="links-card">
+                <div class="card-head">
+                  <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Links</h2>
+                </div>
+                <div class="card-body">
+                  <div class="links-list" id="links-list"></div>
+                </div>
+              </div>
+
+            </div>
+
+            <aside class="sidebar">
+              <div class="card">
+                <div class="card-head">
+                  <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Details</h2>
+                </div>
+                <div class="card-body">
+                  <dl class="detail-list">
+                    <div class="detail-row"><dt>Country</dt><dd id="detail-country">-</dd></div>
+                    <div class="detail-row"><dt>Member since</dt><dd id="detail-since">-</dd></div>
+                    <div class="detail-row"><dt>Reputation</dt><dd id="detail-reputation">0</dd></div>
+                  </dl>
+                </div>
+              </div>
+            </aside>
+
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- Profile page behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Auth || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    function showView(name) {
+      $('loading-view').classList.toggle('hidden', name !== 'loading');
+      $('notfound-view').classList.toggle('hidden', name !== 'notfound');
+      $('profile-view').classList.toggle('hidden', name !== 'profile');
+    }
+
+    function renderAvatar(el, url, name) {
+      el.innerHTML = '';
+      var safe = Utils.safeUrl(url);
+
+      if (safe) {
+        var img = document.createElement('img');
+        img.src = safe;
+        img.alt = '';
+        img.addEventListener('error', function () {
+          el.textContent = Utils.initials(name);
+        });
+        el.appendChild(img);
+      } else {
+        el.textContent = Utils.initials(name);
+      }
+    }
+
+    function addBadge(text, className) {
+      var badge = document.createElement('span');
+      badge.className = className;
+      badge.textContent = text;
+      $('profile-badges').appendChild(badge);
+    }
+
+    function hostOf(url) {
+      try {
+        return new URL(url).hostname.replace(/^www\./, '');
+      } catch (e) {
+        return url;
+      }
+    }
+
+    function addLink(label, url) {
+      var safe = Utils.safeUrl(url);
+      if (!safe) return false;
+
+      var a = document.createElement('a');
+      a.className = 'btn btn-secondary btn-sm';
+      a.href = safe;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer nofollow';
+      a.textContent = label + ': ' + hostOf(safe);
+      $('links-list').appendChild(a);
+      return true;
+    }
+
+    function render(profile, isOwn) {
+      var displayName = profile.full_name || profile.username;
+
+      document.title = displayName + ' (@' + profile.username + ') | ' + APP_CONFIG.brand.name;
+
+      renderAvatar($('profile-avatar'), profile.avatar_url, displayName);
+      $('profile-name').textContent = displayName;
+      $('profile-username').textContent = '@' + profile.username;
+
+      var headline = $('profile-headline');
+      if (profile.headline) {
+        headline.textContent = profile.headline;
+        headline.classList.remove('hidden');
+      }
+
+      $('profile-badges').innerHTML = '';
+      if (profile.is_verified) addBadge('Verified', 'badge badge-brand');
+      if (profile.user_role === 'admin') addBadge('Admin', 'badge badge-warning');
+      if (profile.user_role === 'moderator') addBadge('Moderator', 'badge badge-info');
+      if (profile.country) addBadge(Utils.countryName(profile.country), 'badge');
+
+      $('edit-btn').classList.toggle('hidden', !isOwn);
+
+      /* About */
+      if (profile.bio) {
+        $('bio-text').textContent = profile.bio;
+      } else if (isOwn) {
+        $('bio-text').textContent = 'You have not written a bio yet. Add one so people know who you are.';
+        $('bio-text').style.color = 'var(--text-muted)';
+      } else {
+        $('bio-card').classList.add('hidden');
+      }
+
+      /* Skills */
+      var skills = Array.isArray(profile.skills) ? profile.skills : [];
+      var skillsList = $('skills-list');
+      skillsList.innerHTML = '';
+
+      if (skills.length) {
+        skills.forEach(function (skill) {
+          var tag = document.createElement('span');
+          tag.className = 'tag';
+          tag.textContent = skill;
+          skillsList.appendChild(tag);
+        });
+      } else if (isOwn) {
+        var hint = document.createElement('p');
+        hint.className = 'text-sm text-muted';
+        hint.textContent = 'You have not added any skills yet.';
+        skillsList.appendChild(hint);
+      } else {
+        $('skills-card').classList.add('hidden');
+      }
+
+      /* Links */
+      var linkCount = 0;
+      if (addLink('Website', profile.website_url)) linkCount++;
+      if (addLink('GitHub', profile.github_url)) linkCount++;
+      if (addLink('LinkedIn', profile.linkedin_url)) linkCount++;
+
+      if (!linkCount) {
+        if (isOwn) {
+          var linkHint = document.createElement('p');
+          linkHint.className = 'text-sm text-muted';
+          linkHint.textContent = 'You have not added any links yet.';
+          $('links-list').appendChild(linkHint);
+        } else {
+          $('links-card').classList.add('hidden');
+        }
+      }
+
+      /* Details */
+      $('detail-country').textContent = profile.country ? Utils.countryName(profile.country) : 'Not set';
+      $('detail-since').textContent = Utils.formatDate(profile.created_at) || '-';
+      $('detail-reputation').textContent = Utils.formatNumber(profile.reputation || 0);
+
+      /* Copy link */
+      $('copy-btn').addEventListener('click', async function () {
+        var link = window.location.origin + '/pages/profile/view.html?u=' + encodeURIComponent(profile.username);
+        var ok = await Utils.copyText(link);
+        if (ok) UI.toast.success('Profile link copied.');
+        else UI.toast.error('Could not copy the link. Please copy it from the address bar.');
+      });
+    }
+
+    async function start() {
+      var username = String(Utils.getParam('u') || '').trim().toLowerCase();
+      var profile = null;
+      var isOwn = false;
+
+      if (!username) {
+        // No username given: show the logged-in person's own profile
+        var context = await Auth.requireAuth();
+        if (!context) return; // sent to the login page
+        profile = context.profile;
+        isOwn = true;
+      } else {
+        if (Utils.validate.username(username)) {
+          showView('notfound');
+          return;
+        }
+
+        var result = await sb.from('profiles').select('*').eq('username', username).maybeSingle();
+
+        if (result.error) {
+          console.error('[Analytical] Could not load profile:', result.error);
+          UI.toast.error(sbHelpers.friendlyError(result.error));
+          showView('notfound');
+          return;
+        }
+
+        profile = result.data;
+
+        var viewer = await sbHelpers.getUser();
+        isOwn = !!(viewer && profile && viewer.id === profile.id);
+      }
+
+      if (!profile) {
+        showView('notfound');
+        return;
+      }
+
+      render(profile, isOwn);
+      showView('profile');
+    }
+
+    start();
+  })();
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profile | Analytical</title>
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .profile-hero {
+      background:
+        radial-gradient(760px 300px at 20% -30%, rgba(212, 175, 55, 0.14), transparent 65%),
+        var(--bg-soft);
+      border-bottom: 1px solid var(--border);
+      padding-block: var(--sp-8);
+    }
+
+    .profile-top {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-4);
+      align-items: flex-start;
+    }
+
+    .profile-id h1 {
+      font-size: var(--fs-xl);
+      margin-bottom: 2px;
+    }
+
+    .profile-username {
+      color: var(--text-muted);
+      font-size: var(--fs-sm);
+    }
+
+    .profile-headline {
+      margin-top: var(--sp-2);
+      color: var(--text);
+      font-size: var(--fs-base);
+    }
+
+    .profile-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+      margin-top: var(--sp-3);
+    }
+
+    .profile-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+    }
+
+    .bio-text {
+      white-space: pre-line;
+      word-break: break-word;
+      color: var(--text-soft);
+    }
+
+    .links-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+    }
+
+    .detail-list {
+      display: grid;
+      gap: var(--sp-3);
+      margin: 0;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: var(--sp-4);
+      padding-bottom: var(--sp-3);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .detail-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .detail-row dt {
+      font-size: var(--fs-sm);
+      color: var(--text-muted);
+    }
+
+    .detail-row dd {
+      margin: 0;
+      font-size: var(--fs-sm);
+      font-weight: 500;
+      text-align: right;
+    }
+
+    .stack > * + * {
+      margin-top: var(--sp-4);
+    }
+
+    @media (min-width: 640px) {
+      .profile-top {
+        flex-direction: row;
+        align-items: center;
+        gap: var(--sp-6);
+      }
+
+      .profile-actions {
+        margin-left: auto;
+      }
+
+      .profile-id h1 { font-size: var(--fs-2xl); }
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <!-- Loading -->
+    <div class="loading-block" id="loading-view" style="min-height: 60vh;">
+      <div class="spinner spinner-lg" role="status" aria-label="Loading profile"></div>
+    </div>
+
+    <!-- Profile not found -->
+    <div class="container hidden" id="notfound-view" style="padding-block: var(--sp-12);">
+      <div class="empty-state">
+        <h2>Profile not found</h2>
+        <p>We could not find that member. The username may be wrong, or the profile may have been removed.</p>
+        <a class="btn btn-primary" href="/index.html">Back to home</a>
+      </div>
+    </div>
+
+    <!-- The profile -->
+    <div class="hidden" id="profile-view">
+
+      <section class="profile-hero">
+        <div class="container">
+          <div class="profile-top">
+            <span class="avatar avatar-xl" id="profile-avatar">?</span>
+
+            <div class="profile-id">
+              <h1 id="profile-name">Member</h1>
+              <div class="profile-username" id="profile-username"></div>
+              <p class="profile-headline hidden" id="profile-headline"></p>
+              <div class="profile-badges" id="profile-badges"></div>
+            </div>
+
+            <div class="profile-actions">
+              <a class="btn btn-primary hidden" id="edit-btn" href="/pages/profile/edit.html">Edit profile</a>
+              <button class="btn btn-secondary" type="button" id="copy-btn">Copy profile link</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section style="padding-block: var(--sp-6);">
+        <div class="container">
+          <div class="with-sidebar sidebar-right">
+
+            <div class="stack">
+
+              <div class="card" id="bio-card">
+                <div class="card-head">
+                  <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">About</h2>
+                </div>
+                <div class="card-body">
+                  <p class="bio-text" id="bio-text"></p>
+                </div>
+              </div>
+
+              <div class="card" id="skills-card">
+                <div class="card-head">
+                  <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Skills</h2>
+                </div>
+                <div class="card-body">
+                  <div class="tag-list" id="skills-list"></div>
+                </div>
+              </div>
+
+              <div class="card" id="links-card">
+                <div class="card-head">
+                  <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Links</h2>
+                </div>
+                <div class="card-body">
+                  <div class="links-list" id="links-list"></div>
+                </div>
+              </div>
+
+            </div>
+
+            <aside class="sidebar">
+              <div class="card">
+                <div class="card-head">
+                  <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Details</h2>
+                </div>
+                <div class="card-body">
+                  <dl class="detail-list">
+                    <div class="detail-row"><dt>Country</dt><dd id="detail-country">-</dd></div>
+                    <div class="detail-row"><dt>Member since</dt><dd id="detail-since">-</dd></div>
+                    <div class="detail-row"><dt>Reputation</dt><dd id="detail-reputation">0</dd></div>
+                  </dl>
+                </div>
+              </div>
+            </aside>
+
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- Profile page behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Auth || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    function showView(name) {
+      $('loading-view').classList.toggle('hidden', name !== 'loading');
+      $('notfound-view').classList.toggle('hidden', name !== 'notfound');
+      $('profile-view').classList.toggle('hidden', name !== 'profile');
+    }
+
+    function renderAvatar(el, url, name) {
+      el.innerHTML = '';
+      var safe = Utils.safeUrl(url);
+
+      if (safe) {
+        var img = document.createElement('img');
+        img.src = safe;
+        img.alt = '';
+        img.addEventListener('error', function () {
+          el.textContent = Utils.initials(name);
+        });
+        el.appendChild(img);
+      } else {
+        el.textContent = Utils.initials(name);
+      }
+    }
+
+    function addBadge(text, className) {
+      var badge = document.createElement('span');
+      badge.className = className;
+      badge.textContent = text;
+      $('profile-badges').appendChild(badge);
+    }
+
+    function hostOf(url) {
+      try {
+        return new URL(url).hostname.replace(/^www\./, '');
+      } catch (e) {
+        return url;
+      }
+    }
+
+    function addLink(label, url) {
+      var safe = Utils.safeUrl(url);
+      if (!safe) return false;
+
+      var a = document.createElement('a');
+      a.className = 'btn btn-secondary btn-sm';
+      a.href = safe;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer nofollow';
+      a.textContent = label + ': ' + hostOf(safe);
+      $('links-list').appendChild(a);
+      return true;
+    }
+
+    function render(profile, isOwn) {
+      var displayName = profile.full_name || profile.username;
+
+      document.title = displayName + ' (@' + profile.username + ') | ' + APP_CONFIG.brand.name;
+
+      renderAvatar($('profile-avatar'), profile.avatar_url, displayName);
+      $('profile-name').textContent = displayName;
+      $('profile-username').textContent = '@' + profile.username;
+
+      var headline = $('profile-headline');
+      if (profile.headline) {
+        headline.textContent = profile.headline;
+        headline.classList.remove('hidden');
+      }
+
+      $('profile-badges').innerHTML = '';
+      if (profile.is_verified) addBadge('Verified', 'badge badge-brand');
+      if (profile.user_role === 'admin') addBadge('Admin', 'badge badge-warning');
+      if (profile.user_role === 'moderator') addBadge('Moderator', 'badge badge-info');
+      if (profile.country) addBadge(Utils.countryName(profile.country), 'badge');
+
+      $('edit-btn').classList.toggle('hidden', !isOwn);
+
+      /* About */
+      if (profile.bio) {
+        $('bio-text').textContent = profile.bio;
+      } else if (isOwn) {
+        $('bio-text').textContent = 'You have not written a bio yet. Add one so people know who you are.';
+        $('bio-text').style.color = 'var(--text-muted)';
+      } else {
+        $('bio-card').classList.add('hidden');
+      }
+
+      /* Skills */
+      var skills = Array.isArray(profile.skills) ? profile.skills : [];
+      var skillsList = $('skills-list');
+      skillsList.innerHTML = '';
+
+      if (skills.length) {
+        skills.forEach(function (skill) {
+          var tag = document.createElement('span');
+          tag.className = 'tag';
+          tag.textContent = skill;
+          skillsList.appendChild(tag);
+        });
+      } else if (isOwn) {
+        var hint = document.createElement('p');
+        hint.className = 'text-sm text-muted';
+        hint.textContent = 'You have not added any skills yet.';
+        skillsList.appendChild(hint);
+      } else {
+        $('skills-card').classList.add('hidden');
+      }
+
+      /* Links */
+      var linkCount = 0;
+      if (addLink('Website', profile.website_url)) linkCount++;
+      if (addLink('GitHub', profile.github_url)) linkCount++;
+      if (addLink('LinkedIn', profile.linkedin_url)) linkCount++;
+
+      if (!linkCount) {
+        if (isOwn) {
+          var linkHint = document.createElement('p');
+          linkHint.className = 'text-sm text-muted';
+          linkHint.textContent = 'You have not added any links yet.';
+          $('links-list').appendChild(linkHint);
+        } else {
+          $('links-card').classList.add('hidden');
+        }
+      }
+
+      /* Details */
+      $('detail-country').textContent = profile.country ? Utils.countryName(profile.country) : 'Not set';
+      $('detail-since').textContent = Utils.formatDate(profile.created_at) || '-';
+      $('detail-reputation').textContent = Utils.formatNumber(profile.reputation || 0);
+
+      /* Copy link */
+      $('copy-btn').addEventListener('click', async function () {
+        var link = window.location.origin + '/pages/profile/view.html?u=' + encodeURIComponent(profile.username);
+        var ok = await Utils.copyText(link);
+        if (ok) UI.toast.success('Profile link copied.');
+        else UI.toast.error('Could not copy the link. Please copy it from the address bar.');
+      });
+    }
+
+    async function start() {
+      var username = String(Utils.getParam('u') || '').trim().toLowerCase();
+      var profile = null;
+      var isOwn = false;
+
+      if (!username) {
+        // No username given: show the logged-in person's own profile
+        var context = await Auth.requireAuth();
+        if (!context) return; // sent to the login page
+        profile = context.profile;
+        isOwn = true;
+      } else {
+        if (Utils.validate.username(username)) {
+          showView('notfound');
+          return;
+        }
+
+        var result = await sb.from('profiles').select('*').eq('username', username).maybeSingle();
+
+        if (result.error) {
+          console.error('[Analytical] Could not load profile:', result.error);
+          UI.toast.error(sbHelpers.friendlyError(result.error));
+          showView('notfound');
+          return;
+        }
+
+        profile = result.data;
+
+        var viewer = await sbHelpers.getUser();
+        isOwn = !!(viewer && profile && viewer.id === profile.id);
+      }
+
+      if (!profile) {
+        showView('notfound');
+        return;
+      }
+
+      render(profile, isOwn);
+      showView('profile');
+    }
+
+    start();
+  })();
+</script>
+</body>
+</html>

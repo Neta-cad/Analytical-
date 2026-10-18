@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard | Analytical</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .dash-head h1 {
+      font-size: var(--fs-xl);
+    }
+
+    @media (min-width: 768px) {
+      .dash-head h1 { font-size: var(--fs-2xl); }
+    }
+
+    .detail-list {
+      display: grid;
+      gap: var(--sp-3);
+      margin: 0;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: var(--sp-4);
+      padding-bottom: var(--sp-3);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .detail-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .detail-row dt {
+      font-size: var(--fs-sm);
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .detail-row dd {
+      margin: 0;
+      font-size: var(--fs-sm);
+      font-weight: 500;
+      color: var(--text);
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .todo-list {
+      list-style: none;
+      padding: 0;
+      margin: var(--sp-4) 0 0;
+      display: grid;
+      gap: var(--sp-2);
+    }
+
+    .todo-list li {
+      display: flex;
+      gap: var(--sp-3);
+      align-items: center;
+      font-size: var(--fs-sm);
+      color: var(--text-soft);
+    }
+
+    .todo-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: var(--radius-full);
+      background: var(--brand-600);
+      flex-shrink: 0;
+    }
+
+    .module-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      padding: var(--sp-3) 0;
+      border-bottom: 1px solid var(--border);
+      font-size: var(--fs-sm);
+    }
+
+    .module-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .module-row:first-child {
+      padding-top: 0;
+    }
+
+    .module-row a {
+      font-weight: 600;
+    }
+
+    .stack > * + * {
+      margin-top: var(--sp-4);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <!-- Shown while the login check runs -->
+    <div class="loading-block" id="loading-view" style="min-height: 60vh;">
+      <div class="spinner spinner-lg" role="status" aria-label="Loading your dashboard"></div>
+    </div>
+
+    <!-- The dashboard -->
+    <div class="dash-layout hidden" id="dash-view">
+
+      <aside class="dash-sidebar" aria-label="Dashboard menu">
+        <a class="side-link active" href="/pages/dashboard/index.html" aria-current="page">Overview</a>
+        <a class="side-link" href="/pages/profile/view.html">My profile</a>
+        <a class="side-link" href="/pages/profile/edit.html">Edit profile</a>
+        <button class="side-link" type="button" data-logout>Log out</button>
+      </aside>
+
+      <div class="dash-content">
+        <div class="stack">
+
+          <div class="dash-head">
+            <span class="section-eyebrow">Dashboard</span>
+            <h1 id="welcome-title">Welcome</h1>
+            <p class="mt-2" id="welcome-sub">Here is where your account stands.</p>
+          </div>
+
+          <div class="alert alert-warning hidden" id="email-alert" role="alert">
+            Your email address has not been confirmed yet. Open the confirmation email we sent you to finish setting up your account.
+          </div>
+
+          <div class="alert alert-info hidden" id="profile-missing" role="alert">
+            Your profile could not be loaded. Please refresh the page. If this keeps happening, log out and log in again.
+          </div>
+
+          <!-- Real numbers from your account -->
+          <div class="grid-3">
+            <div class="card"><div class="card-body stat-card">
+              <div class="stat-label">Reputation</div>
+              <div class="stat-value" id="stat-reputation">0</div>
+              <div class="stat-note">Grows as you take part</div>
+            </div></div>
+
+            <div class="card"><div class="card-body stat-card">
+              <div class="stat-label">Member since</div>
+              <div class="stat-value" id="stat-since" style="font-size: var(--fs-xl);">-</div>
+              <div class="stat-note" id="stat-verified">Standard member</div>
+            </div></div>
+
+            <div class="card"><div class="card-body stat-card">
+              <div class="stat-label">Country</div>
+              <div class="stat-value" id="stat-country" style="font-size: var(--fs-xl);">-</div>
+              <div class="stat-note">Shown on your public profile</div>
+            </div></div>
+          </div>
+
+          <div class="grid-2">
+
+            <!-- Profile completeness, worked out from the real profile -->
+            <div class="card">
+              <div class="card-head">
+                <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Profile strength</h2>
+                <span class="badge badge-brand" id="strength-badge">0%</span>
+              </div>
+              <div class="card-body">
+                <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="strength-bar-wrap">
+                  <div class="progress-bar" id="strength-bar"></div>
+                </div>
+
+                <ul class="todo-list" id="todo-list"></ul>
+
+                <p class="text-sm hidden" id="strength-done" style="margin-top: var(--sp-4);">
+                  Your profile is complete. Nice work.
+                </p>
+
+                <a class="btn btn-primary btn-sm mt-4" href="/pages/profile/edit.html">Edit profile</a>
+              </div>
+            </div>
+
+            <!-- Account details -->
+            <div class="card">
+              <div class="card-head">
+                <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Account details</h2>
+              </div>
+              <div class="card-body">
+                <dl class="detail-list">
+                  <div class="detail-row"><dt>Username</dt><dd id="detail-username">-</dd></div>
+                  <div class="detail-row"><dt>Full name</dt><dd id="detail-name">-</dd></div>
+                  <div class="detail-row"><dt>Email</dt><dd id="detail-email">-</dd></div>
+                  <div class="detail-row"><dt>Email status</dt><dd id="detail-email-status">-</dd></div>
+                </dl>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Which parts of the platform are open -->
+          <div class="card">
+            <div class="card-head">
+              <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Platform status</h2>
+            </div>
+            <div class="card-body">
+              <div id="module-list"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- Dashboard behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Auth) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var MODULES = [
+      { key: 'marketplace', name: 'Marketplace', href: '/pages/marketplace/browse.html' },
+      { key: 'jobs', name: 'Jobs and gigs', href: '/pages/jobs/browse.html' },
+      { key: 'qa', name: 'Questions and answers', href: '/pages/qa/index.html' },
+      { key: 'learn', name: 'Learn', href: '/pages/learn/courses.html' },
+      { key: 'community', name: 'Community', href: '/pages/community/groups.html' },
+      { key: 'data', name: 'Data tools', href: '/pages/data/datasets.html' }
+    ];
+
+    function firstName(profile) {
+      var name = String((profile && (profile.full_name || profile.username)) || '').trim();
+      return name ? name.split(/\s+/)[0] : '';
+    }
+
+    /* ---------- Profile strength, from the real profile ---------- */
+    function renderStrength(profile) {
+      var skills = profile && Array.isArray(profile.skills) ? profile.skills : [];
+
+      var checks = [
+        { label: 'Add your full name', done: !!(profile && profile.full_name) },
+        { label: 'Add a headline', done: !!(profile && profile.headline) },
+        { label: 'Write a short bio', done: !!(profile && profile.bio) },
+        { label: 'Upload a profile photo', done: !!(profile && profile.avatar_url) },
+        { label: 'Select your country', done: !!(profile && profile.country) },
+        { label: 'Add your skills', done: skills.length > 0 },
+        {
+          label: 'Add a website, GitHub or LinkedIn link',
+          done: !!(profile && (profile.website_url || profile.github_url || profile.linkedin_url))
+        }
+      ];
+
+      var doneCount = checks.filter(function (c) { return c.done; }).length;
+      var percent = Math.round((doneCount / checks.length) * 100);
+
+      $('strength-badge').textContent = percent + '%';
+      $('strength-bar').style.width = percent + '%';
+      $('strength-bar-wrap').setAttribute('aria-valuenow', String(percent));
+
+      var list = $('todo-list');
+      list.innerHTML = '';
+
+      checks.forEach(function (c) {
+        if (c.done) return;
+        var li = document.createElement('li');
+        var dot = document.createElement('span');
+        dot.className = 'todo-dot';
+        var text = document.createElement('span');
+        text.textContent = c.label;
+        li.appendChild(dot);
+        li.appendChild(text);
+        list.appendChild(li);
+      });
+
+      $('strength-done').classList.toggle('hidden', doneCount !== checks.length);
+    }
+
+    /* ---------- Platform status, from the feature switches ---------- */
+    function renderModules() {
+      var wrap = $('module-list');
+      wrap.innerHTML = '';
+
+      MODULES.forEach(function (m) {
+        var on = APP_CONFIG.isOn(m.key);
+
+        var row = document.createElement('div');
+        row.className = 'module-row';
+
+        var name;
+        if (on) {
+          name = document.createElement('a');
+          name.href = m.href;
+        } else {
+          name = document.createElement('span');
+        }
+        name.textContent = m.name;
+
+        var badge = document.createElement('span');
+        badge.className = on ? 'badge badge-brand' : 'badge';
+        badge.textContent = on ? 'Open' : 'Coming soon';
+
+        row.appendChild(name);
+        row.appendChild(badge);
+        wrap.appendChild(row);
+      });
+    }
+
+    /* ---------- Fill the page ---------- */
+    function render(user, profile) {
+      var name = firstName(profile);
+      $('welcome-title').textContent = name ? 'Welcome, ' + name : 'Welcome';
+
+      $('detail-email').textContent = user.email || '-';
+      $('stat-since').textContent = Utils.formatDate(user.created_at) || '-';
+
+      var confirmed = !!user.email_confirmed_at;
+      $('detail-email-status').textContent = confirmed ? 'Confirmed' : 'Not confirmed';
+      $('email-alert').classList.toggle('hidden', confirmed);
+
+      if (profile) {
+        $('stat-reputation').textContent = Utils.formatNumber(profile.reputation || 0);
+        $('stat-country').textContent = profile.country ? Utils.countryName(profile.country) : 'Not set';
+        $('stat-verified').textContent = profile.is_verified ? 'Verified member' : 'Standard member';
+        $('detail-username').textContent = profile.username ? '@' + profile.username : '-';
+        $('detail-name').textContent = profile.full_name || 'Not set';
+      } else {
+        $('profile-missing').classList.remove('hidden');
+        $('stat-country').textContent = '-';
+      }
+
+      renderStrength(profile);
+      renderModules();
+    }
+
+    /* ---------- Protect the page, then show it ---------- */
+    async function start() {
+      var context = await Auth.requireAuth();
+      if (!context) return; // not logged in: sent to the login page
+
+      render(context.user, context.profile);
+
+      $('loading-view').classList.add('hidden');
+      $('dash-view').classList.remove('hidden');
+    }
+
+    start();
+  })();
+</script>
+</body>
+</html>
