@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contact | Analytical</title>
+  <meta name="description" content="Contact the Analytical team for support, privacy requests or to report a problem.">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .email-box {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      padding: var(--sp-4) var(--sp-5);
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-left: 3px solid var(--brand-600);
+      border-radius: var(--radius-lg);
+      max-width: 640px;
+    }
+
+    .email-address {
+      font-weight: 600;
+      color: var(--text);
+      word-break: break-all;
+    }
+
+    .contact-card {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-2);
+      padding: var(--sp-5);
+      height: 100%;
+    }
+
+    .contact-card h2 {
+      font-family: var(--font-sans);
+      font-size: var(--fs-md);
+    }
+
+    .contact-card p {
+      font-size: var(--fs-sm);
+    }
+
+    .contact-card .btn {
+      margin-top: auto;
+      align-self: flex-start;
+    }
+
+    .contact-card .btn-wrap {
+      margin-top: auto;
+      padding-top: var(--sp-3);
+    }
+
+    .tips {
+      max-width: 640px;
+    }
+
+    .tips ul {
+      margin: var(--sp-2) 0 0;
+      padding-left: 1.25rem;
+      display: grid;
+      gap: var(--sp-2);
+      color: var(--text-soft);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <section class="page-header">
+      <div class="container">
+        <h1>Contact us</h1>
+        <p>Reach the <span data-brand-name>Analytical</span> team by email.</p>
+      </div>
+    </section>
+
+    <section style="padding-block: var(--sp-6);">
+      <div class="container">
+
+        <!-- Shown when the support email is set in config.js -->
+        <div id="contact-ready" class="hidden">
+
+          <div class="email-box">
+            <div>
+              <div class="text-xs text-muted">Support email</div>
+              <a class="email-address" id="email-link" href="#"></a>
+            </div>
+            <button class="btn btn-secondary btn-sm" type="button" id="copy-email">Copy address</button>
+          </div>
+
+          <div class="grid-3" style="margin-top: var(--sp-6);">
+
+            <div class="card contact-card">
+              <h2>General support</h2>
+              <p>Questions about your account, logging in, your profile or how something works.</p>
+              <div class="btn-wrap"><a class="btn btn-primary btn-sm" id="link-support" href="#">Email support</a></div>
+            </div>
+
+            <div class="card contact-card">
+              <h2>Privacy and account requests</h2>
+              <p>Ask for a copy of your information, a correction, or to have your account deleted.</p>
+              <div class="btn-wrap"><a class="btn btn-secondary btn-sm" id="link-privacy" href="#">Send a request</a></div>
+            </div>
+
+            <div class="card contact-card">
+              <h2>Report a problem</h2>
+              <p>Found a bug, an abusive profile or something that does not look right? Tell us.</p>
+              <div class="btn-wrap"><a class="btn btn-secondary btn-sm" id="link-report" href="#">Report it</a></div>
+            </div>
+
+          </div>
+
+          <div class="tips" style="margin-top: var(--sp-8);">
+            <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">To help us help you</h2>
+            <ul>
+              <li>Write from the email address on your account, or include it in your message.</li>
+              <li>Tell us what you were trying to do and what happened instead.</li>
+              <li>Never send your password. We will never ask for it.</li>
+            </ul>
+            <p class="text-sm mt-4">You may also find a quick answer in the <a href="/pages/help.html">Help center</a>.</p>
+          </div>
+
+        </div>
+
+        <!-- Shown if the support email has not been set in config.js yet -->
+        <div id="contact-missing" class="hidden">
+          <div class="empty-state">
+            <h3>Contact details are being set up</h3>
+            <p>Our support email will be available here soon. In the meantime, the Help center answers common questions.</p>
+            <a class="btn btn-primary" href="/pages/help.html">Open the Help center</a>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- Contact page behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var email = String(APP_CONFIG.brand.supportEmail || '').trim();
+    var valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) && email.indexOf('REPLACE_') === -1;
+
+    if (!valid) {
+      $('contact-missing').classList.remove('hidden');
+      return;
+    }
+
+    function mailto(subject, body) {
+      return 'mailto:' + email +
+        '?subject=' + encodeURIComponent(subject) +
+        '&body=' + encodeURIComponent(body);
+    }
+
+    var brand = APP_CONFIG.brand.name;
+
+    var emailLink = $('email-link');
+    emailLink.href = 'mailto:' + email;
+    emailLink.textContent = email;
+
+    $('link-support').href = mailto(
+      brand + ' support request',
+      'Hello,\n\nMy account email: \n\nMy question:\n'
+    );
+
+    $('link-privacy').href = mailto(
+      brand + ' privacy or account request',
+      'Hello,\n\nMy account email: \nMy username: \n\nI would like to (copy of my information / correction / account deletion):\n'
+    );
+
+    $('link-report').href = mailto(
+      brand + ' problem report',
+      'Hello,\n\nWhat happened:\n\nThe page address (link):\n\nMy account email (optional): \n'
+    );
+
+    $('copy-email').addEventListener('click', async function () {
+      var ok = await Utils.copyText(email);
+      if (ok) UI.toast.success('Email address copied.');
+      else UI.toast.error('Could not copy. Please copy it from the page.');
+    });
+
+    $('contact-ready').classList.remove('hidden');
+  })();
+</script>
+</body>
+</html>

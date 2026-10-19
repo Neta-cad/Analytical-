@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About | Analytical</title>
+  <meta name="description" content="Analytical is a global home for coders, data analysts, data scientists and tech creators.">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .prose {
+      max-width: 720px;
+    }
+
+    .prose h2 {
+      font-size: var(--fs-lg);
+      margin: var(--sp-8) 0 var(--sp-2);
+    }
+
+    .prose h2:first-child {
+      margin-top: 0;
+    }
+
+    .prose p + p {
+      margin-top: var(--sp-3);
+    }
+
+    .prose ul {
+      margin: var(--sp-2) 0 0;
+      padding-left: 1.25rem;
+      display: grid;
+      gap: var(--sp-2);
+      color: var(--text-soft);
+    }
+
+    .module-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      padding: var(--sp-3) 0;
+      border-bottom: 1px solid var(--border);
+      font-size: var(--fs-sm);
+    }
+
+    .module-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .module-row:first-child {
+      padding-top: 0;
+    }
+
+    .module-row a {
+      font-weight: 600;
+    }
+
+    .cta-band {
+      border-radius: var(--radius-xl);
+      padding: var(--sp-10) var(--sp-5);
+      text-align: center;
+      background:
+        radial-gradient(520px 260px at 50% 0%, rgba(212, 175, 55, 0.2), transparent 65%),
+        #0a0a0a;
+      border: 1px solid var(--brand-800);
+    }
+
+    .cta-band h2 { color: #f2eee3; }
+
+    .cta-band p {
+      color: #bfb8a7;
+      max-width: 480px;
+      margin: var(--sp-2) auto 0;
+    }
+
+    .cta-band .actions {
+      margin-top: var(--sp-5);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <section class="page-header">
+      <div class="container">
+        <h1>About <span data-brand-name>Analytical</span></h1>
+        <p>A global home for the people who build with code and data.</p>
+      </div>
+    </section>
+
+    <section style="padding-block: var(--sp-8);">
+      <div class="container">
+        <div class="prose">
+
+          <h2>Why we are building this</h2>
+          <p>Talent in tech is everywhere, but opportunity, learning and income are not shared out evenly. Good developers, analysts and data scientists are often hard to find, and hard to hire, because their work is scattered across many places.</p>
+          <p><span data-brand-name>Analytical</span> is our answer: one place where tech people can show their work, sell what they build, find jobs, learn from each other and solve problems together, from any country.</p>
+
+          <h2>Who it is for</h2>
+          <ul>
+            <li>Developers, designers and other creators who want their work to be seen</li>
+            <li>Data analysts and data scientists who want to share and sell their skills</li>
+            <li>Tutors and mentors who want to teach</li>
+            <li>Employers and recruiters looking for real, proven talent</li>
+            <li>Learners who want to ask questions and grow</li>
+          </ul>
+
+          <h2>What is open today</h2>
+          <p>You can create a free account, build a public profile and portfolio page with your skills and links, upload a profile photo, and be found through search. Everything else is opening in phases.</p>
+
+        </div>
+      </div>
+    </section>
+
+    <section style="padding-block: var(--sp-8); background: var(--bg-soft); border-block: 1px solid var(--border);">
+      <div class="container">
+        <div class="prose">
+          <h2 style="margin-top: 0;">What is coming</h2>
+          <p class="mb-4">Each part of the platform opens only when it is fully built and working.</p>
+
+          <div class="card">
+            <div class="card-body">
+              <div id="module-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section style="padding-block: var(--sp-8);">
+      <div class="container">
+        <div class="prose">
+
+          <h2>How we build</h2>
+          <p>We would rather open a feature late and working than early and empty. Every part of <span data-brand-name>Analytical</span> is built to do real work: real accounts, real data and real security. Features that are not ready are clearly marked "Coming soon".</p>
+
+          <h2>Who runs it</h2>
+          <p><span data-brand-name>Analytical</span> is a product of <span data-company>Nexabay Technologies</span>, a technology company based in Nigeria, building digital platforms for people in Africa and around the world.</p>
+
+          <h2>Get in touch</h2>
+          <p>Questions, feedback or ideas? Visit our <a href="/pages/contact.html">Contact page</a>, or read the <a href="/pages/help.html">Help center</a>.</p>
+
+        </div>
+      </div>
+    </section>
+
+    <section style="padding-bottom: var(--sp-4);">
+      <div class="container">
+        <div class="cta-band">
+          <h2>Be part of it from the start</h2>
+          <p>Create your profile now and have your place ready as each module opens.</p>
+
+          <div class="actions" data-auth="out">
+            <a class="btn btn-primary btn-lg" href="/pages/auth/register.html">Create free account</a>
+          </div>
+
+          <div class="actions hidden" data-auth="in">
+            <a class="btn btn-primary btn-lg" href="/pages/dashboard/index.html">Go to dashboard</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- About page behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG) return;
+
+    var MODULES = [
+      { key: 'marketplace', name: 'Marketplace', href: '/pages/marketplace/browse.html' },
+      { key: 'jobs', name: 'Jobs and gigs', href: '/pages/jobs/browse.html' },
+      { key: 'qa', name: 'Questions and answers', href: '/pages/qa/index.html' },
+      { key: 'learn', name: 'Learn', href: '/pages/learn/courses.html' },
+      { key: 'community', name: 'Community', href: '/pages/community/groups.html' },
+      { key: 'data', name: 'Data tools', href: '/pages/data/datasets.html' }
+    ];
+
+    var wrap = document.getElementById('module-list');
+    wrap.innerHTML = '';
+
+    MODULES.forEach(function (m) {
+      var on = APP_CONFIG.isOn(m.key);
+
+      var row = document.createElement('div');
+      row.className = 'module-row';
+
+      var name;
+      if (on) {
+        name = document.createElement('a');
+        name.href = m.href;
+      } else {
+        name = document.createElement('span');
+      }
+      name.textContent = m.name;
+
+      var badge = document.createElement('span');
+      badge.className = on ? 'badge badge-brand' : 'badge';
+      badge.textContent = on ? 'Open' : 'Coming soon';
+
+      row.appendChild(name);
+      row.appendChild(badge);
+      wrap.appendChild(row);
+    });
+  })();
+</script>
+</body>
+</html>

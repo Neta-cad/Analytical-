@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Help center | Analytical</title>
+  <meta name="description" content="Answers to common questions about using Analytical.">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .faq {
+      max-width: 760px;
+      display: grid;
+      gap: var(--sp-2);
+    }
+
+    .faq-group-title {
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--brand-500);
+      margin: var(--sp-6) 0 var(--sp-1);
+    }
+
+    .faq-group-title:first-child {
+      margin-top: 0;
+    }
+
+    details {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: border-color var(--t-fast) var(--ease);
+    }
+
+    details[open] {
+      border-color: var(--brand-700);
+    }
+
+    summary {
+      cursor: pointer;
+      list-style: none;
+      padding: var(--sp-3) var(--sp-4);
+      font-weight: 600;
+      font-size: var(--fs-sm);
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+    }
+
+    summary::-webkit-details-marker { display: none; }
+
+    summary::after {
+      content: "+";
+      font-size: var(--fs-lg);
+      line-height: 1;
+      color: var(--brand-500);
+      flex-shrink: 0;
+    }
+
+    details[open] summary::after {
+      content: "\2212";
+    }
+
+    .faq-answer {
+      padding: 0 var(--sp-4) var(--sp-4);
+      font-size: var(--fs-sm);
+      color: var(--text-soft);
+    }
+
+    .faq-answer p + p {
+      margin-top: var(--sp-2);
+    }
+
+    .faq-answer ul {
+      margin: var(--sp-2) 0 0;
+      padding-left: 1.25rem;
+      display: grid;
+      gap: var(--sp-1);
+    }
+
+    [data-theme="light"] .faq-group-title,
+    [data-theme="light"] summary::after {
+      color: var(--brand-800);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <section class="page-header">
+      <div class="container">
+        <h1>Help center</h1>
+        <p>Quick answers to common questions about <span data-brand-name>Analytical</span>.</p>
+      </div>
+    </section>
+
+    <section style="padding-block: var(--sp-6);">
+      <div class="container">
+        <div class="faq">
+
+          <h2 class="faq-group-title">Getting started</h2>
+
+          <details>
+            <summary>How do I create an account?</summary>
+            <div class="faq-answer">
+              <p>Tap <a href="/pages/auth/register.html">Create account</a>, enter your full name, a username, your email, your country and a password, then agree to the Terms. We will email you a confirmation link. Open it, then log in.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Is it free to join?</summary>
+            <div class="faq-answer">
+              <p>Yes. Creating an account and building a profile is free. If paid features such as selling projects open in future, separate terms will be shown to you before you use them.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>I did not get my confirmation email</summary>
+            <div class="faq-answer">
+              <p>Check your spam or junk folder first. Then try to <a href="/pages/auth/login.html">log in</a>. If your email is not confirmed yet, a button appears that lets you resend the email. You can resend it once every minute.</p>
+            </div>
+          </details>
+
+          <h2 class="faq-group-title">Your account</h2>
+
+          <details>
+            <summary>I forgot my password</summary>
+            <div class="faq-answer">
+              <p>Go to <a href="/pages/auth/forgot.html">Forgot password</a>, enter your email and we will send a reset link. Open the link right away, because it expires after a while and can only be used once.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>My reset link says it will not work</summary>
+            <div class="faq-answer">
+              <p>The link has expired or was already used. Request a new one from the <a href="/pages/auth/forgot.html">Forgot password</a> page, and open only the newest email you receive.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>Can I change my username?</summary>
+            <div class="faq-answer">
+              <p>No. Usernames cannot be changed, because they form the link to your public profile. You can change your name, headline, bio, photo, country, skills and links at any time on the Edit profile page.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>How do I delete my account?</summary>
+            <div class="faq-answer">
+              <p>Send an account deletion request from the <a href="/pages/contact.html">Contact page</a>, writing from the email address on your account. We may need to confirm that it is really you before we delete anything.</p>
+            </div>
+          </details>
+
+          <h2 class="faq-group-title">Your profile</h2>
+
+          <details>
+            <summary>Who can see my profile?</summary>
+            <div class="faq-answer">
+              <p>Everyone. Your profile is public, including to people who are not logged in, and it can appear in search. This includes your username, name, headline, bio, skills, photo, country, links and join date. Your email address and password are never shown.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>What photo can I upload?</summary>
+            <div class="faq-answer">
+              <p>A JPG, PNG or WebP image up to 2 MB. Upload it from the Edit profile page and tap Save changes.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>How do I get found in search?</summary>
+            <div class="faq-answer">
+              <p>Search looks at names, usernames, headlines and skills. To be easier to find:</p>
+              <ul>
+                <li>Add a clear headline that says what you do</li>
+                <li>List your main skills, such as SQL or Python</li>
+                <li>Select your country</li>
+              </ul>
+              <p>The profile strength bar on your dashboard shows what is still missing.</p>
+            </div>
+          </details>
+
+          <h2 class="faq-group-title">The platform</h2>
+
+          <details>
+            <summary>Why are some sections marked "Coming soon"?</summary>
+            <div class="faq-answer">
+              <p><span data-brand-name>Analytical</span> opens in phases, and a section only goes live once it is fully built and working. You can see what is open on the <a href="/pages/about.html">About page</a>.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>How do I report a problem or an abusive profile?</summary>
+            <div class="faq-answer">
+              <p>Use the <a href="/pages/contact.html">Contact page</a> and choose Report a problem. Include the link to the page so we can find it quickly.</p>
+            </div>
+          </details>
+
+          <details>
+            <summary>How is my information used?</summary>
+            <div class="faq-answer">
+              <p>Read our <a href="/pages/privacy.html">Privacy Policy</a> and <a href="/pages/terms.html">Terms of Service</a> for the full details.</p>
+            </div>
+          </details>
+
+        </div>
+
+        <div class="card" style="max-width: 760px; margin-top: var(--sp-8);">
+          <div class="card-body">
+            <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Still need help?</h2>
+            <p class="mt-2 text-sm">If you cannot find your answer here, contact the team.</p>
+            <a class="btn btn-primary btn-sm mt-4" href="/pages/contact.html">Contact us</a>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+</body>
+</html>

@@ -135,7 +135,7 @@
                       <button class="btn btn-secondary btn-sm" type="button" id="choose-photo">Choose photo</button>
                       <button class="btn btn-ghost btn-sm hidden" type="button" id="remove-photo">Remove photo</button>
                     </div>
-                    <p class="form-hint mt-2">JPG, PNG or WebP. Up to <span id="avatar-max">2</span> MB.</p>
+                    <p class="form-hint mt-2" id="avatar-hint">JPG, PNG or WebP. Large photos are resized for you.</p>
                     <p class="form-error hidden" id="avatar-error"></p>
                   </div>
                 </div>
@@ -272,13 +272,18 @@
     var limits = APP_CONFIG.limits;
     var BUCKET = 'avatars';
 
+    // Photos are scaled down in the browser before they are uploaded
+    var AVATAR_SIZE = 512;          // final photo is at most 512 x 512 pixels
+    var RAW_PHOTO_MAX_MB = 25;      // biggest original we will even try to open
+
     var user = null;
     var profile = null;
 
     var dirty = false;
-    var newFile = null;        // a photo chosen but not saved yet
+    var newFile = null;        // a prepared photo, not saved yet
     var newFileUrl = '';       // temporary preview address for that photo
     var removeAvatar = false;  // the person tapped "Remove photo"
+    var preparing = false;     // a photo is being resized right now
 
     var form = $('profile-form');
     var saveBtn = $('save-btn');
@@ -296,7 +301,11 @@
     var avatarPreview = $('avatar-preview');
     var avatarFile = $('avatar-file');
     var avatarError = $('avatar-error');
+    var avatarHint = $('avatar-hint');
+    var chooseBtn = $('choose-photo');
     var removeBtn = $('remove-photo');
+
+    var HINT_TEXT = 'JPG, PNG or WebP. Large photos are resized for you.';
 
     /* ---------- Avatar preview ---------- */
     function displayName() {
@@ -322,8 +331,7 @@
         avatarPreview.textContent = Utils.initials(displayName());
       }
 
-      var hasPhoto = !!source;
-      removeBtn.classList.toggle('hidden', !hasPhoto);
+      removeBtn.classList.toggle('hidden', !source);
     }
 
     function setAvatarError(message) {
@@ -331,15 +339,105 @@
       avatarError.classList.toggle('hidden', !message);
     }
 
-    $('choose-photo').addEventListener('click', function () {
+    /* ---------- Resize a photo in the browser ---------- */
+    function loadPicture(file) {
+      // Modern browsers apply the camera's rotation automatically
+      if (window.createImageBitmap) {
+        return createImageBitmap(file).then(function (bitmap) {
+          return { source: bitmap, width: bitmap.width, height: bitmap.height, release: function () { if (bitmap.close) bitmap.close(); } };
+        });
+      }
+
+      return new Promise(function (resolve, reject) {
+        var url = URL.createObjectURL(file);
+        var img = new Image();
+        img.onload = function () {
+          resolve({
+            source: img,
+            width: img.naturalWidth,
+            height: img.naturalHeight,
+            release: function () { URL.revokeObjectURL(url); }
+          });
+        };
+        img.onerror = function () {
+          URL.revokeObjectURL(url);
+          reject(new Error('Could not read that image.'));
+        };
+        img.src = url;
+      });
+    }
+
+    function canvasToBlob(canvas, type, quality) {
+      return new Promise(function (resolve) {
+        canvas.toBlob(function (blob) { resolve(blob); }, type, quality);
+      });
+    }
+
+    async function makeAvatarBlob(file) {
+      var picture = await loadPicture(file);
+
+      try {
+        var width = picture.width;
+        var height = picture.height;
+        if (!width || !height) throw new Error('Could not read that image.');
+
+        // Crop to a centred square, and never scale a small photo up
+        var side = Math.min(width, height);
+        var sx = Math.round((width - side) / 2);
+        var sy = Math.round((height - side) / 2);
+        var out = Math.min(AVATAR_SIZE, side);
+
+        var canvas = document.createElement('canvas');
+        canvas.width = out;
+        canvas.height = out;
+        var ctx = canvas.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(picture.source, sx, sy, side, side, 0, 0, out, out);
+
+        var maxBytes = limits.avatarMaxMB * 1024 * 1024;
+        var qualities = [0.86, 0.72, 0.58, 0.45];
+        var blob = null;
+
+        // WebP is smallest. Some older browsers cannot make it, so fall back to JPEG.
+        for (var i = 0; i < qualities.length; i++) {
+          blob = await canvasToBlob(canvas, 'image/webp', qualities[i]);
+          if (blob && blob.type === 'image/webp' && blob.size <= maxBytes) return blob;
+        }
+
+        // JPEG has no transparency, so paint a white background first
+        ctx.globalCompositeOperation = 'destination-over';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, out, out);
+
+        for (var j = 0; j < qualities.length; j++) {
+          blob = await canvasToBlob(canvas, 'image/jpeg', qualities[j]);
+          if (blob && blob.size <= maxBytes) return blob;
+        }
+
+        throw new Error('That photo is still too large after resizing. Please choose a different one.');
+      } finally {
+        picture.release();
+      }
+    }
+
+    function setPreparing(isPreparing) {
+      preparing = isPreparing;
+      chooseBtn.disabled = isPreparing;
+      removeBtn.disabled = isPreparing;
+      saveBtn.disabled = isPreparing;
+      avatarHint.textContent = isPreparing ? 'Preparing your photo...' : HINT_TEXT;
+    }
+
+    chooseBtn.addEventListener('click', function () {
       avatarFile.click();
     });
 
-    avatarFile.addEventListener('change', function () {
+    avatarFile.addEventListener('change', async function () {
       var file = avatarFile.files && avatarFile.files[0];
       if (!file) return;
 
-      var problem = Utils.validate.imageFile(file, limits.avatarMaxMB);
+      // Check the type, and refuse only enormous originals
+      var problem = Utils.validate.imageFile(file, RAW_PHOTO_MAX_MB);
       if (problem) {
         setAvatarError(problem);
         avatarFile.value = '';
@@ -347,13 +445,24 @@
       }
 
       setAvatarError('');
-      if (newFileUrl) URL.revokeObjectURL(newFileUrl);
+      setPreparing(true);
 
-      newFile = file;
-      newFileUrl = URL.createObjectURL(file);
-      removeAvatar = false;
-      dirty = true;
-      renderAvatarPreview();
+      try {
+        var blob = await makeAvatarBlob(file);
+
+        if (newFileUrl) URL.revokeObjectURL(newFileUrl);
+        newFile = blob;
+        newFileUrl = URL.createObjectURL(blob);
+        removeAvatar = false;
+        dirty = true;
+        renderAvatarPreview();
+      } catch (error) {
+        console.error('[Analytical] Photo preparation failed:', error);
+        setAvatarError(error && error.message ? error.message : 'Could not use that photo. Please try another one.');
+      }
+
+      avatarFile.value = '';
+      setPreparing(false);
     });
 
     removeBtn.addEventListener('click', function () {
@@ -534,6 +643,7 @@
       e.preventDefault();
       formError.classList.add('hidden');
 
+      if (preparing) return;
       if (!validateAll()) return;
 
       UI.setLoading(saveBtn, true);
@@ -542,7 +652,7 @@
       var avatarUrl = oldAvatarUrl;
       var uploadedPath = '';
 
-      /* 1. Upload a new photo, if one was chosen */
+      /* 1. Upload the prepared photo, if one was chosen */
       if (newFile) {
         var path = user.id + '/' + Date.now() + '.' + extensionFor(newFile);
 
@@ -621,7 +731,6 @@
       linkedinInput.value = profile.linkedin_url || '';
 
       Utils.fillCountrySelect(countryInput, profile.country || '');
-      $('avatar-max').textContent = String(limits.avatarMaxMB);
 
       bioInput.maxLength = limits.bioMaxChars;
       updateBioCounter();
