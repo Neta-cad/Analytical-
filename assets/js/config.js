@@ -50,7 +50,7 @@
       qa: false,
       learn: false,
       community: false,
-      data: false,
+      data: true,
       wallet: false
     },
 

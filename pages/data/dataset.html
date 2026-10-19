@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dataset | Analytical</title>
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .dataset-hero {
+      background:
+        radial-gradient(760px 300px at 20% -30%, rgba(212, 175, 55, 0.14), transparent 65%),
+        var(--bg-soft);
+      border-bottom: 1px solid var(--border);
+      padding-block: var(--sp-6);
+    }
+
+    .dataset-hero h1 {
+      font-size: var(--fs-xl);
+      margin: var(--sp-3) 0 var(--sp-3);
+      word-break: break-word;
+    }
+
+    @media (min-width: 768px) {
+      .dataset-hero h1 { font-size: var(--fs-2xl); }
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+    }
+
+    .owner-row {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sp-2);
+      color: var(--text-soft);
+      font-size: var(--fs-sm);
+    }
+
+    .owner-row a {
+      font-weight: 600;
+    }
+
+    .desc-text {
+      white-space: pre-line;
+      word-break: break-word;
+      color: var(--text-soft);
+    }
+
+    .detail-list {
+      display: grid;
+      gap: var(--sp-3);
+      margin: 0;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: var(--sp-4);
+      padding-bottom: var(--sp-3);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .detail-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .detail-row dt {
+      font-size: var(--fs-sm);
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .detail-row dd {
+      margin: 0;
+      font-size: var(--fs-sm);
+      font-weight: 500;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    .price-line {
+      font-family: var(--font-display);
+      font-size: var(--fs-2xl);
+      font-weight: 600;
+      color: var(--brand-400);
+      line-height: 1.1;
+    }
+
+    [data-theme="light"] .price-line {
+      color: var(--brand-800);
+    }
+
+    .column-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+    }
+
+    .column-list .tag {
+      font-family: var(--font-mono);
+      font-size: var(--fs-xs);
+    }
+
+    .preview-table th,
+    .preview-table td {
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .stack > * + * {
+      margin-top: var(--sp-4);
+    }
+
+    /* On a phone the download card comes first. On a wide screen it sits on the right. */
+    @media (min-width: 960px) {
+      .with-sidebar.sidebar-right > .stack { grid-column: 1; grid-row: 1; }
+      .with-sidebar.sidebar-right > .sidebar { grid-column: 2; grid-row: 1; }
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <!-- Loading -->
+    <div class="loading-block" id="loading-view" style="min-height: 60vh;">
+      <div class="spinner spinner-lg" role="status" aria-label="Loading dataset"></div>
+    </div>
+
+    <!-- Not found -->
+    <div class="container hidden" id="notfound-view" style="padding-block: var(--sp-12);">
+      <div class="empty-state">
+        <h2>Dataset not found</h2>
+        <p>This dataset may have been removed, or the link may be wrong.</p>
+        <a class="btn btn-primary" href="/pages/data/datasets.html">Browse datasets</a>
+      </div>
+    </div>
+
+    <!-- The dataset -->
+    <div class="hidden" id="dataset-view">
+
+      <section class="dataset-hero">
+        <div class="container">
+          <a class="text-sm" href="/pages/data/datasets.html">&larr; All datasets</a>
+          <h1 id="d-title">Dataset</h1>
+          <div class="badge-row" id="d-badges"></div>
+          <div class="owner-row mt-3" id="d-owner"></div>
+        </div>
+      </section>
+
+      <section style="padding-block: var(--sp-6);">
+        <div class="container">
+          <div class="with-sidebar sidebar-right">
+
+            <aside class="sidebar">
+              <div class="stack">
+
+                <div class="card">
+                  <div class="card-body">
+                    <div class="price-line" id="d-price">Free</div>
+                    <p class="text-xs text-muted mt-1" id="d-price-note">Free to download for members.</p>
+
+                    <button class="btn btn-primary btn-lg btn-block mt-4" type="button" id="download-btn">Download</button>
+                    <p class="form-hint mt-2" id="download-note"></p>
+                  </div>
+                </div>
+
+                <div class="card">
+                  <div class="card-head">
+                    <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Details</h2>
+                  </div>
+                  <div class="card-body">
+                    <dl class="detail-list" id="d-details"></dl>
+                  </div>
+                </div>
+
+                <div class="card hidden" id="owner-card">
+                  <div class="card-head">
+                    <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Manage</h2>
+                  </div>
+                  <div class="card-body">
+                    <p class="text-sm">This is your dataset.</p>
+                    <button class="btn btn-danger btn-sm mt-3" type="button" id="delete-btn">Delete dataset</button>
+                  </div>
+                </div>
+
+              </div>
+            </aside>
+
+            <div class="stack">
+
+              <div class="card">
+                <div class="card-head">
+                  <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">About this dataset</h2>
+                </div>
+                <div class="card-body">
+                  <p class="desc-text" id="d-description"></p>
+                  <div class="tag-list mt-4 hidden" id="d-tags"></div>
+                </div>
+              </div>
+
+              <div class="card hidden" id="columns-card">
+                <div class="card-head">
+                  <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Columns</h2>
+                  <span class="badge" id="columns-count"></span>
+                </div>
+                <div class="card-body">
+                  <div class="column-list" id="d-columns"></div>
+                </div>
+              </div>
+
+              <div class="card hidden" id="preview-card">
+                <div class="card-head">
+                  <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Preview</h2>
+                  <span class="text-xs text-muted" id="preview-note"></span>
+                </div>
+                <div class="table-wrap" style="border: 0; border-radius: 0;">
+                  <table class="table preview-table" id="preview-table"></table>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- Dataset page behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var BUCKET = 'datasets';
+    var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    var CATEGORIES = {
+      business: 'Business', finance: 'Finance', health: 'Health', education: 'Education',
+      technology: 'Technology', science: 'Science', agriculture: 'Agriculture',
+      environment: 'Environment', transport: 'Transport', government: 'Government',
+      social: 'Social', sports: 'Sports', entertainment: 'Entertainment', other: 'Other'
+    };
+
+    var LICENSES = {
+      'cc0': 'CC0 (public domain)',
+      'cc-by': 'CC BY',
+      'cc-by-sa': 'CC BY-SA',
+      'cc-by-nc': 'CC BY-NC',
+      'odbl': 'ODbL',
+      'custom': 'Custom (see description)'
+    };
+
+    var dataset = null;
+    var viewer = null;
+
+    function showView(name) {
+      $('loading-view').classList.toggle('hidden', name !== 'loading');
+      $('notfound-view').classList.toggle('hidden', name !== 'notfound');
+      $('dataset-view').classList.toggle('hidden', name !== 'dataset');
+    }
+
+    function formatBytes(bytes) {
+      var n = Number(bytes) || 0;
+      if (n < 1024) return n + ' B';
+      if (n < 1048576) return (n / 1024).toFixed(0) + ' KB';
+      return (n / 1048576).toFixed(1) + ' MB';
+    }
+
+    function addBadge(text, className) {
+      var badge = document.createElement('span');
+      badge.className = className;
+      badge.textContent = text;
+      $('d-badges').appendChild(badge);
+    }
+
+    function addDetail(label, value) {
+      if (value == null || value === '') return;
+
+      var row = document.createElement('div');
+      row.className = 'detail-row';
+
+      var dt = document.createElement('dt');
+      dt.textContent = label;
+      var dd = document.createElement('dd');
+      dd.textContent = value;
+
+      row.appendChild(dt);
+      row.appendChild(dd);
+      $('d-details').appendChild(row);
+    }
+
+    /* ---------- Owner ---------- */
+    function renderOwner(owner) {
+      var wrap = $('d-owner');
+      wrap.innerHTML = '';
+      if (!owner || !owner.username) return;
+
+      var name = owner.full_name || owner.username;
+
+      var avatar = document.createElement('span');
+      avatar.className = 'avatar avatar-sm';
+      var url = Utils.safeUrl(owner.avatar_url);
+      if (url) {
+        var img = document.createElement('img');
+        img.src = url;
+        img.alt = '';
+        img.addEventListener('error', function () { avatar.textContent = Utils.initials(name); });
+        avatar.appendChild(img);
+      } else {
+        avatar.textContent = Utils.initials(name);
+      }
+
+      var by = document.createElement('span');
+      by.textContent = 'Shared by ';
+
+      var link = document.createElement('a');
+      link.href = '/pages/profile/view.html?u=' + encodeURIComponent(owner.username);
+      link.textContent = name;
+
+      wrap.appendChild(avatar);
+      wrap.appendChild(by);
+      wrap.appendChild(link);
+    }
+
+    /* ---------- Preview table ---------- */
+    function renderPreview(d) {
+      var columns = Array.isArray(d.columns) ? d.columns : [];
+      var rows = Array.isArray(d.preview) ? d.preview : [];
+
+      if (columns.length) {
+        $('columns-count').textContent = columns.length + (columns.length === 1 ? ' column' : ' columns');
+
+        var list = $('d-columns');
+        list.innerHTML = '';
+        columns.forEach(function (name) {
+          var tag = document.createElement('span');
+          tag.className = 'tag';
+          tag.textContent = name;
+          list.appendChild(tag);
+        });
+        $('columns-card').classList.remove('hidden');
+      }
+
+      if (columns.length && rows.length) {
+        var shown = columns.slice(0, 30);
+        var table = $('preview-table');
+        table.innerHTML = '';
+
+        var thead = document.createElement('thead');
+        var headRow = document.createElement('tr');
+        shown.forEach(function (name) {
+          var th = document.createElement('th');
+          th.textContent = name;
+          headRow.appendChild(th);
+        });
+        thead.appendChild(headRow);
+
+        var tbody = document.createElement('tbody');
+        rows.forEach(function (row) {
+          var tr = document.createElement('tr');
+          (Array.isArray(row) ? row : []).forEach(function (cell) {
+            var td = document.createElement('td');
+            td.textContent = cell == null ? '' : String(cell);
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(thead);
+        table.appendChild(tbody);
+
+        $('preview-note').textContent = 'First ' + rows.length + (rows.length === 1 ? ' row' : ' rows');
+        $('preview-card').classList.remove('hidden');
+      }
+    }
+
+    /* ---------- Download button state ---------- */
+    function setupDownloadButton() {
+      var btn = $('download-btn');
+      var note = $('download-note');
+      var isOwner = !!(viewer && viewer.id === dataset.owner_id);
+      var paid = Number(dataset.price_amount) > 0;
+
+      if (paid && !isOwner) {
+        btn.textContent = 'Purchases open soon';
+        btn.disabled = true;
+        note.textContent = 'Paid downloads are not available yet.';
+        return;
+      }
+
+      if (!viewer) {
+        btn.textContent = 'Log in to download';
+        note.textContent = 'Creating an account is free.';
+        return;
+      }
+
+      btn.textContent = 'Download ' + String(dataset.file_type || '').toUpperCase() + ' (' + formatBytes(dataset.file_size) + ')';
+      note.textContent = 'The link works for one minute and then expires.';
+    }
+
+    /* ---------- Download ---------- */
+    async function startDownload() {
+      var btn = $('download-btn');
+
+      if (!viewer) {
+        var here = window.location.pathname + window.location.search;
+        window.location.href = APP_CONFIG.routes.login + '?next=' + encodeURIComponent(here);
+        return;
+      }
+
+      UI.setLoading(btn, true);
+
+      var signed = await sb.storage.from(BUCKET).createSignedUrl(dataset.file_path, 60, { download: dataset.file_name });
+
+      if (signed.error || !signed.data || !signed.data.signedUrl) {
+        UI.setLoading(btn, false);
+        console.error('[Analytical] Could not create download link:', signed.error);
+        UI.toast.error('Could not start the download. ' + sbHelpers.friendlyError(signed.error));
+        return;
+      }
+
+      // Count the download (once per member). A counting problem never blocks the file.
+      var counted = await sb.rpc('record_dataset_download', { p_dataset_id: dataset.id });
+      if (counted.error) {
+        console.error('[Analytical] Could not record the download:', counted.error);
+      } else {
+        var fresh = await sb.from('datasets').select('download_count').eq('id', dataset.id).maybeSingle();
+        if (fresh.data) {
+          dataset.download_count = fresh.data.download_count;
+          renderDetails();
+        }
+      }
+
+      var link = document.createElement('a');
+      link.href = signed.data.signedUrl;
+      link.download = dataset.file_name;
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      UI.setLoading(btn, false);
+      UI.toast.success('Your download has started.');
+    }
+
+    /* ---------- Details list ---------- */
+    function renderDetails() {
+      $('d-details').innerHTML = '';
+      addDetail('Category', CATEGORIES[dataset.category] || 'Other');
+      addDetail('File type', String(dataset.file_type || '').toUpperCase());
+      addDetail('File size', formatBytes(dataset.file_size));
+      if (dataset.row_count != null) addDetail('Rows', Number(dataset.row_count).toLocaleString());
+      addDetail('Licence', LICENSES[dataset.license] || dataset.license);
+      addDetail('Downloads', Number(dataset.download_count || 0).toLocaleString());
+      addDetail('Published', Utils.formatDate(dataset.created_at));
+    }
+
+    /* ---------- Delete (owner only) ---------- */
+    async function deleteDataset() {
+      var ok = await UI.confirm({
+        title: 'Delete this dataset?',
+        message: 'The listing and the file will be removed for good. This cannot be undone.',
+        confirmText: 'Delete',
+        danger: true
+      });
+      if (!ok) return;
+
+      var btn = $('delete-btn');
+      UI.setLoading(btn, true);
+
+      var result = await sb.from('datasets').delete().eq('id', dataset.id).select('id');
+
+      if (result.error || !result.data || !result.data.length) {
+        UI.setLoading(btn, false);
+        UI.toast.error(result.error ? sbHelpers.friendlyError(result.error) : 'Could not delete this dataset.');
+        return;
+      }
+
+      var removed = await sb.storage.from(BUCKET).remove([dataset.file_path]);
+      if (removed.error) console.error('[Analytical] Could not remove the file:', removed.error);
+
+      window.location.href = '/pages/data/datasets.html';
+    }
+
+    /* ---------- Fill the page ---------- */
+    function render() {
+      var d = dataset;
+      var isOwner = !!(viewer && viewer.id === d.owner_id);
+
+      document.title = d.title + ' | ' + APP_CONFIG.brand.name;
+      $('d-title').textContent = d.title;
+
+      $('d-badges').innerHTML = '';
+      addBadge(CATEGORIES[d.category] || 'Other', 'badge badge-brand');
+      addBadge(Number(d.price_amount) > 0 ? 'Paid' : 'Free', 'badge');
+      addBadge(String(d.file_type || '').toUpperCase(), 'badge');
+      if (d.status !== 'published') addBadge(d.status === 'draft' ? 'Draft' : 'Removed', 'badge badge-warning');
+
+      renderOwner(d.owner);
+
+      $('d-description').textContent = d.description;
+
+      var tags = Array.isArray(d.tags) ? d.tags : [];
+      if (tags.length) {
+        var tagWrap = $('d-tags');
+        tagWrap.innerHTML = '';
+        tags.forEach(function (tag) {
+          var el = document.createElement('a');
+          el.className = 'tag';
+          el.href = '/pages/data/datasets.html?q=' + encodeURIComponent(tag);
+          el.textContent = tag;
+          tagWrap.appendChild(el);
+        });
+        tagWrap.classList.remove('hidden');
+      }
+
+      if (Number(d.price_amount) > 0) {
+        $('d-price').textContent = APP_CONFIG.formatMoney(d.price_amount, d.currency);
+        $('d-price-note').textContent = 'One-time purchase.';
+      }
+
+      renderDetails();
+      renderPreview(d);
+      setupDownloadButton();
+
+      $('owner-card').classList.toggle('hidden', !isOwner);
+    }
+
+    /* ---------- Start ---------- */
+    async function start() {
+      var id = String(Utils.getParam('id') || '').trim();
+
+      if (!UUID.test(id)) {
+        showView('notfound');
+        return;
+      }
+
+      viewer = await sbHelpers.getUser();
+
+      var result = await sb
+        .from('datasets')
+        .select('*, owner:profiles(username, full_name, avatar_url)')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (result.error) {
+        console.error('[Analytical] Could not load dataset:', result.error);
+        UI.toast.error(sbHelpers.friendlyError(result.error));
+        showView('notfound');
+        return;
+      }
+
+      if (!result.data) {
+        showView('notfound');
+        return;
+      }
+
+      dataset = result.data;
+      render();
+      showView('dataset');
+    }
+
+    $('download-btn').addEventListener('click', startDownload);
+    $('delete-btn').addEventListener('click', deleteDataset);
+
+    start();
+  })();
+</script>
+</body>
+</html>

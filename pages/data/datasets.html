@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Datasets | Analytical</title>
+  <meta name="description" content="Browse and download datasets shared by the Analytical community.">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .head-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--sp-4);
+    }
+
+    .filter-row {
+      display: grid;
+      gap: var(--sp-3);
+      grid-template-columns: 1fr;
+      margin-top: var(--sp-3);
+    }
+
+    @media (min-width: 640px) {
+      .filter-row { grid-template-columns: 1fr 1fr; max-width: 520px; }
+    }
+
+    .data-card {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sp-3);
+      padding: var(--sp-5);
+      height: 100%;
+      color: inherit;
+    }
+
+    .data-card:hover { color: inherit; }
+
+    .data-card-top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+    }
+
+    .data-card h2 {
+      font-family: var(--font-sans);
+      font-size: var(--fs-md);
+      font-weight: 600;
+      color: var(--text);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .data-card p {
+      font-size: var(--fs-sm);
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .data-card-foot {
+      margin-top: auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-1) var(--sp-3);
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+      padding-top: var(--sp-3);
+      border-top: 1px solid var(--border);
+    }
+
+    .result-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      margin-bottom: var(--sp-4);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <section class="page-header">
+      <div class="container">
+        <div class="head-row">
+          <div>
+            <h1>Datasets</h1>
+            <p>Browse data shared by the community. Preview it, then download it free.</p>
+          </div>
+          <a class="btn btn-primary" href="/pages/data/upload.html">Upload a dataset</a>
+        </div>
+
+        <form class="search-bar mt-4" id="search-form" role="search" novalidate style="max-width: 640px;">
+          <div class="input-group">
+            <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+            <input class="input" id="q" name="q" type="search" maxlength="60"
+                   autocomplete="off" autocapitalize="none"
+                   placeholder="Search by title, description or tag" aria-label="Search datasets">
+          </div>
+          <button class="btn btn-primary" type="submit">Search</button>
+        </form>
+
+        <div class="filter-row">
+          <div>
+            <label class="sr-only" for="category">Category</label>
+            <select class="select" id="category"></select>
+          </div>
+          <div>
+            <label class="sr-only" for="sort">Sort by</label>
+            <select class="select" id="sort">
+              <option value="newest">Newest</option>
+              <option value="popular">Most downloaded</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section style="padding-block: var(--sp-6);">
+      <div class="container">
+
+        <div class="result-bar">
+          <p class="text-sm" id="result-count" aria-live="polite"></p>
+        </div>
+
+        <div class="loading-block" id="loading-view">
+          <div class="spinner spinner-lg" role="status" aria-label="Loading datasets"></div>
+        </div>
+
+        <div class="grid-3 hidden" id="results"></div>
+
+        <div class="empty-state hidden" id="empty-view">
+          <h3 id="empty-title">No datasets</h3>
+          <p id="empty-text"></p>
+          <a class="btn btn-primary hidden" id="empty-action" href="/pages/data/upload.html">Upload the first dataset</a>
+        </div>
+
+        <div class="pagination hidden" id="pagination" aria-label="Pages"></div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- Datasets browse behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var PAGE_SIZE = 12;
+    var COLUMNS =
+      'id, title, description, category, tags, file_type, file_size, row_count, ' +
+      'download_count, created_at, price_amount, currency, is_free, ' +
+      'owner:profiles(username, full_name)';
+
+    var CATEGORIES = {
+      business: 'Business', finance: 'Finance', health: 'Health', education: 'Education',
+      technology: 'Technology', science: 'Science', agriculture: 'Agriculture',
+      environment: 'Environment', transport: 'Transport', government: 'Government',
+      social: 'Social', sports: 'Sports', entertainment: 'Entertainment', other: 'Other'
+    };
+
+    var qInput = $('q');
+    var categorySelect = $('category');
+    var sortSelect = $('sort');
+
+    var state = { q: '', category: '', sort: 'newest', page: 1 };
+    var requestId = 0;
+
+    /* ---------- Category filter ---------- */
+    var allOption = document.createElement('option');
+    allOption.value = '';
+    allOption.textContent = 'All categories';
+    categorySelect.appendChild(allOption);
+
+    Object.keys(CATEGORIES).forEach(function (key) {
+      var opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = CATEGORIES[key];
+      categorySelect.appendChild(opt);
+    });
+
+    /* ---------- Small helpers ---------- */
+    function formatBytes(bytes) {
+      var n = Number(bytes) || 0;
+      if (n < 1024) return n + ' B';
+      if (n < 1048576) return (n / 1024).toFixed(0) + ' KB';
+      return (n / 1048576).toFixed(1) + ' MB';
+    }
+
+    /* ---------- Read and write the address ---------- */
+    function readUrl() {
+      state.q = String(Utils.getParam('q') || '').slice(0, 60);
+
+      var category = String(Utils.getParam('category') || '');
+      state.category = CATEGORIES[category] ? category : '';
+
+      state.sort = Utils.getParam('sort') === 'popular' ? 'popular' : 'newest';
+
+      var page = parseInt(Utils.getParam('page'), 10);
+      state.page = page > 0 ? page : 1;
+
+      qInput.value = state.q;
+      categorySelect.value = state.category;
+      sortSelect.value = state.sort;
+    }
+
+    function writeUrl() {
+      var params = new URLSearchParams();
+      if (state.q) params.set('q', state.q);
+      if (state.category) params.set('category', state.category);
+      if (state.sort !== 'newest') params.set('sort', state.sort);
+      if (state.page > 1) params.set('page', String(state.page));
+
+      var query = params.toString();
+      history.replaceState(null, '', window.location.pathname + (query ? '?' + query : ''));
+    }
+
+    /* ---------- Make the search term safe for the database filter ---------- */
+    function cleanTerm(raw) {
+      return String(raw || '')
+        .replace(/[^\p{L}\p{N}\s\-]/gu, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 50);
+    }
+
+    function buildFilter(term) {
+      return [
+        'title.ilike.%' + term + '%',
+        'description.ilike.%' + term + '%',
+        'tags.cs.{"' + term.toLowerCase() + '"}'
+      ].join(',');
+    }
+
+    /* ---------- Show the right part of the page ---------- */
+    function showState(name) {
+      $('loading-view').classList.toggle('hidden', name !== 'loading');
+      $('results').classList.toggle('hidden', name !== 'results');
+      $('empty-view').classList.toggle('hidden', name !== 'empty');
+      if (name !== 'results') $('pagination').classList.add('hidden');
+    }
+
+    /* ---------- Dataset card ---------- */
+    function buildCard(d) {
+      var card = document.createElement('a');
+      card.className = 'card card-hover data-card';
+      card.href = '/pages/data/dataset.html?id=' + encodeURIComponent(d.id);
+
+      var top = document.createElement('div');
+      top.className = 'data-card-top';
+
+      var cat = document.createElement('span');
+      cat.className = 'badge badge-brand';
+      cat.textContent = CATEGORIES[d.category] || 'Other';
+      top.appendChild(cat);
+
+      var price = document.createElement('span');
+      price.className = 'badge';
+      price.textContent = Number(d.price_amount) > 0 ? APP_CONFIG.formatMoney(d.price_amount, d.currency) : 'Free';
+      top.appendChild(price);
+
+      var type = document.createElement('span');
+      type.className = 'badge';
+      type.textContent = String(d.file_type || '').toUpperCase();
+      top.appendChild(type);
+
+      card.appendChild(top);
+
+      var title = document.createElement('h2');
+      title.textContent = d.title;
+      card.appendChild(title);
+
+      var desc = document.createElement('p');
+      desc.textContent = d.description;
+      card.appendChild(desc);
+
+      var tags = Array.isArray(d.tags) ? d.tags.slice(0, 3) : [];
+      if (tags.length) {
+        var tagList = document.createElement('div');
+        tagList.className = 'tag-list';
+        tags.forEach(function (tag) {
+          var el = document.createElement('span');
+          el.className = 'tag';
+          el.textContent = tag;
+          tagList.appendChild(el);
+        });
+        card.appendChild(tagList);
+      }
+
+      var foot = document.createElement('div');
+      foot.className = 'data-card-foot';
+
+      var bits = [formatBytes(d.file_size)];
+      if (d.row_count != null) bits.push(Number(d.row_count).toLocaleString() + ' rows');
+      bits.push(Utils.formatNumber(d.download_count || 0) + (d.download_count === 1 ? ' download' : ' downloads'));
+
+      bits.forEach(function (text) {
+        var span = document.createElement('span');
+        span.textContent = text;
+        foot.appendChild(span);
+      });
+
+      if (d.owner && d.owner.username) {
+        var by = document.createElement('span');
+        by.textContent = 'by ' + (d.owner.full_name || d.owner.username);
+        foot.appendChild(by);
+      }
+
+      card.appendChild(foot);
+      return card;
+    }
+
+    /* ---------- Pagination ---------- */
+    function pageButton(label, page, options) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'page-btn' + (options && options.active ? ' active' : '');
+      btn.textContent = label;
+      if (options && options.disabled) btn.disabled = true;
+      if (options && options.active) btn.setAttribute('aria-current', 'page');
+
+      btn.addEventListener('click', function () {
+        state.page = page;
+        run();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      return btn;
+    }
+
+    function renderPagination(total) {
+      var wrap = $('pagination');
+      wrap.innerHTML = '';
+
+      var pages = Math.ceil(total / PAGE_SIZE);
+      if (pages <= 1) {
+        wrap.classList.add('hidden');
+        return;
+      }
+
+      wrap.appendChild(pageButton('Previous', state.page - 1, { disabled: state.page <= 1 }));
+
+      var start = Math.max(1, state.page - 2);
+      var end = Math.min(pages, start + 4);
+      start = Math.max(1, end - 4);
+
+      for (var p = start; p <= end; p++) {
+        wrap.appendChild(pageButton(String(p), p, { active: p === state.page }));
+      }
+
+      wrap.appendChild(pageButton('Next', state.page + 1, { disabled: state.page >= pages }));
+      wrap.classList.remove('hidden');
+    }
+
+    /* ---------- Run the search ---------- */
+    async function run(isRetry) {
+      var id = ++requestId;
+      showState('loading');
+      writeUrl();
+
+      var term = cleanTerm(state.q);
+      var from = (state.page - 1) * PAGE_SIZE;
+
+      var query = sb.from('datasets').select(COLUMNS, { count: 'exact' }).eq('status', 'published');
+
+      if (term) query = query.or(buildFilter(term));
+      if (state.category) query = query.eq('category', state.category);
+
+      if (state.sort === 'popular') {
+        query = query.order('download_count', { ascending: false }).order('created_at', { ascending: false });
+      } else {
+        query = query.order('created_at', { ascending: false });
+      }
+
+      var result = await query.range(from, from + PAGE_SIZE - 1);
+      if (id !== requestId) return; // a newer search is already running
+
+      if (result.error) {
+        // A page number beyond the last page: go back to page 1 once
+        if (!isRetry && state.page > 1) {
+          state.page = 1;
+          run(true);
+          return;
+        }
+
+        console.error('[Analytical] Dataset search failed:', result.error);
+
+        var text = String(result.error.message || '').toLowerCase();
+        var missing =
+          result.error.code === '42P01' ||
+          result.error.code === 'PGRST205' ||
+          text.indexOf('does not exist') !== -1 ||
+          text.indexOf('could not find the table') !== -1;
+
+        $('result-count').textContent = '';
+        $('empty-title').textContent = missing ? 'Datasets are not set up yet' : 'Datasets are not available right now';
+        $('empty-text').textContent = missing
+          ? 'Run the datasets.sql file in the Supabase SQL Editor, then refresh this page.'
+          : sbHelpers.friendlyError(result.error);
+        $('empty-action').classList.add('hidden');
+        showState('empty');
+        return;
+      }
+
+      var items = result.data || [];
+      var total = result.count || 0;
+
+      if (!items.length) {
+        var filtering = !!(term || state.category);
+        $('result-count').textContent = '';
+
+        if (filtering) {
+          $('empty-title').textContent = 'No datasets found';
+          $('empty-text').textContent = 'Try different words or clear the category filter. Tag searches match a whole tag, such as health or finance.';
+          $('empty-action').classList.add('hidden');
+        } else {
+          $('empty-title').textContent = 'No datasets yet';
+          $('empty-text').textContent = 'Be the first to share data with the community.';
+          $('empty-action').classList.remove('hidden');
+        }
+
+        showState('empty');
+        return;
+      }
+
+      var list = $('results');
+      list.innerHTML = '';
+      items.forEach(function (d) { list.appendChild(buildCard(d)); });
+
+      var first = from + 1;
+      var last = from + items.length;
+      $('result-count').textContent =
+        total <= PAGE_SIZE
+          ? total + (total === 1 ? ' dataset' : ' datasets')
+          : 'Showing ' + first + ' to ' + last + ' of ' + total + ' datasets';
+
+      showState('results');
+      renderPagination(total);
+    }
+
+    /* ---------- Events ---------- */
+    $('search-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      state.q = qInput.value.trim();
+      state.page = 1;
+      qInput.blur();
+      run();
+    });
+
+    categorySelect.addEventListener('change', function () {
+      state.category = categorySelect.value;
+      state.page = 1;
+      run();
+    });
+
+    sortSelect.addEventListener('change', function () {
+      state.sort = sortSelect.value;
+      state.page = 1;
+      run();
+    });
+
+    /* ---------- Start ---------- */
+    readUrl();
+    run();
+  })();
+</script>
+</body>
+</html>
