@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Upload a dataset | Analytical</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .upload-wrap {
+      max-width: 720px;
+    }
+
+    .edit-section {
+      margin-bottom: var(--sp-4);
+    }
+
+    .file-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--sp-3);
+    }
+
+    .file-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .file-name {
+      font-weight: 600;
+      font-size: var(--fs-sm);
+      word-break: break-all;
+    }
+
+    .file-meta {
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .preview-meta {
+      font-size: var(--fs-sm);
+      color: var(--text-soft);
+      margin-bottom: var(--sp-3);
+    }
+
+    .preview-table th,
+    .preview-table td {
+      max-width: 220px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .price-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      padding: var(--sp-3) var(--sp-4);
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: var(--fs-sm);
+    }
+
+    .save-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-3);
+      align-items: center;
+    }
+
+    .confirm-panel {
+      text-align: center;
+    }
+
+    .confirm-icon {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto var(--sp-4);
+      border-radius: var(--radius-full);
+      display: grid;
+      place-items: center;
+      background: rgba(212, 175, 55, 0.14);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: var(--brand-400);
+    }
+
+    [data-theme="light"] .confirm-icon {
+      background: var(--brand-50);
+      border-color: var(--brand-200);
+      color: var(--brand-800);
+    }
+
+    .stack > * + * {
+      margin-top: var(--sp-4);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <section class="page-header">
+      <div class="container">
+        <h1>Upload a dataset</h1>
+        <p>Share data with the community. Every member can find it, preview it and download it.</p>
+      </div>
+    </section>
+
+    <section style="padding-block: var(--sp-6);">
+      <div class="container">
+
+        <!-- Checking login -->
+        <div class="loading-block" id="loading-view" style="min-height: 40vh;">
+          <div class="spinner spinner-lg" role="status" aria-label="Loading"></div>
+        </div>
+
+        <!-- Database not set up -->
+        <div class="hidden" id="setup-view">
+          <div class="empty-state">
+            <h3>The datasets database is not set up yet</h3>
+            <p>Run the <strong>datasets.sql</strong> file in the Supabase SQL Editor, then refresh this page.</p>
+            <button class="btn btn-primary" type="button" onclick="window.location.reload()">Refresh</button>
+          </div>
+        </div>
+
+        <!-- The form -->
+        <div class="upload-wrap hidden" id="form-view">
+
+          <div class="alert alert-danger hidden" id="form-error" role="alert"></div>
+
+          <form id="upload-form" novalidate>
+
+            <!-- File -->
+            <div class="card edit-section">
+              <div class="card-head">
+                <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">1. Your file</h2>
+              </div>
+              <div class="card-body">
+                <div class="file-row">
+                  <button class="btn btn-secondary" type="button" id="choose-file">Choose file</button>
+
+                  <div class="file-info hidden" id="file-info">
+                    <div class="file-name" id="file-name"></div>
+                    <div class="file-meta" id="file-meta"></div>
+                  </div>
+
+                  <button class="btn btn-ghost btn-sm hidden" type="button" id="remove-file">Remove</button>
+                </div>
+
+                <input type="file" id="file-input" accept=".csv,.json,.zip,.xls,.xlsx" class="hidden">
+
+                <p class="form-hint mt-2">CSV, JSON, Excel (XLS or XLSX) or ZIP. Up to 50 MB. For CSV, put column names in the first row.</p>
+                <p class="form-error hidden" id="file-error"></p>
+
+                <!-- Preview, built from the real file -->
+                <div class="hidden" id="preview-box" style="margin-top: var(--sp-4);">
+                  <div class="preview-meta" id="preview-meta"></div>
+                  <div class="table-wrap">
+                    <table class="table preview-table" id="preview-table"></table>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Details -->
+            <div class="card edit-section">
+              <div class="card-head">
+                <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">2. Details</h2>
+              </div>
+              <div class="card-body">
+
+                <div class="form-group">
+                  <label class="form-label" for="title">Title <span class="req">*</span></label>
+                  <input class="input" id="title" type="text" maxlength="120"
+                         placeholder="e.g. Lagos monthly rainfall, 2015 to 2024">
+                  <p class="form-error hidden" id="title-error"></p>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="description">Description <span class="req">*</span></label>
+                  <textarea class="textarea" id="description" maxlength="5000" style="min-height: 140px;"
+                            placeholder="What is in this data? Where did it come from? How was it collected? What does each column mean?"></textarea>
+                  <p class="form-hint">At least 10 characters. A good description gets more downloads.</p>
+                  <p class="form-error hidden" id="description-error"></p>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label" for="category">Category <span class="req">*</span></label>
+                    <select class="select" id="category">
+                      <option value="">Select a category</option>
+                      <option value="business">Business</option>
+                      <option value="finance">Finance</option>
+                      <option value="health">Health</option>
+                      <option value="education">Education</option>
+                      <option value="technology">Technology</option>
+                      <option value="science">Science</option>
+                      <option value="agriculture">Agriculture</option>
+                      <option value="environment">Environment</option>
+                      <option value="transport">Transport</option>
+                      <option value="government">Government</option>
+                      <option value="social">Social</option>
+                      <option value="sports">Sports</option>
+                      <option value="entertainment">Entertainment</option>
+                      <option value="other">Other</option>
+                    </select>
+                    <p class="form-error hidden" id="category-error"></p>
+                  </div>
+
+                  <div class="form-group">
+                    <label class="form-label" for="license">Licence <span class="req">*</span></label>
+                    <select class="select" id="license">
+                      <option value="cc-by">CC BY: reuse with credit</option>
+                      <option value="cc0">CC0: public domain, no conditions</option>
+                      <option value="cc-by-sa">CC BY-SA: credit, share alike</option>
+                      <option value="cc-by-nc">CC BY-NC: credit, non-commercial only</option>
+                      <option value="odbl">ODbL: open database licence</option>
+                      <option value="custom">Custom: explain in the description</option>
+                    </select>
+                    <p class="form-error hidden" id="license-error"></p>
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" for="tags">Tags</label>
+                  <input class="input" id="tags" type="text" autocapitalize="none"
+                         placeholder="e.g. weather, nigeria, time series">
+                  <p class="form-hint">Separate tags with commas. Up to 10 tags, 30 characters each.</p>
+                  <div class="tag-list mt-2" id="tags-preview"></div>
+                  <p class="form-error hidden" id="tags-error"></p>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Price -->
+            <div class="card edit-section">
+              <div class="card-head">
+                <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">3. Price</h2>
+              </div>
+              <div class="card-body">
+                <div class="price-box">
+                  <span>Free for everyone</span>
+                  <span class="badge badge-brand">Free</span>
+                </div>
+                <p class="form-hint mt-2">Paid datasets are coming. Free datasets you publish now will stay free.</p>
+              </div>
+            </div>
+
+            <!-- Confirmation -->
+            <div class="card edit-section">
+              <div class="card-body">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="check" for="rights">
+                    <input type="checkbox" id="rights">
+                    <span>
+                      I own this data or have the right to share it, and it does not contain private
+                      personal information about people without their permission. I agree to the
+                      <a href="/pages/terms.html" target="_blank" rel="noopener">Terms of Service</a>.
+                    </span>
+                  </label>
+                  <p class="form-error hidden" id="rights-error"></p>
+                </div>
+              </div>
+            </div>
+
+            <div class="save-bar">
+              <button class="btn btn-primary btn-lg" type="submit" id="submit-btn">Publish dataset</button>
+              <a class="btn btn-secondary btn-lg" href="/pages/dashboard/index.html">Cancel</a>
+            </div>
+            <p class="form-hint mt-2" id="upload-note"></p>
+
+          </form>
+        </div>
+
+        <!-- Success -->
+        <div class="hidden" id="done-view" style="max-width: 520px;">
+          <div class="card">
+            <div class="card-body confirm-panel">
+              <div class="confirm-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
+              </div>
+              <h2 style="font-size: var(--fs-xl);">Dataset published</h2>
+              <p class="mt-2 text-sm">Your file is saved in private storage and your listing is live.</p>
+
+              <div class="mt-6" style="display: grid; gap: var(--sp-2);">
+                <a class="btn btn-primary btn-block" id="view-link" href="/pages/data/datasets.html">View your dataset</a>
+                <a class="btn btn-secondary btn-block" href="/pages/data/upload.html">Upload another</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- CSV reader for this page only -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+<!-- Upload page behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Auth || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var BUCKET = 'datasets';
+    var MAX_BYTES = 52428800;               // 50 MB, matches the database and bucket
+    var CSV_FULL_SCAN_MAX = 15 * 1024 * 1024; // count rows only for files up to 15 MB
+    var JSON_PARSE_MAX = 5 * 1024 * 1024;     // read JSON structure only up to 5 MB
+    var MAX_COLUMNS = 200;
+    var PREVIEW_ROWS = 5;
+    var PREVIEW_COLUMNS = 30;
+    var CELL_MAX = 100;
+
+    // The file type comes from the extension. Some phones report CSV files wrongly.
+    var TYPES = {
+      csv:  'text/csv',
+      json: 'application/json',
+      zip:  'application/zip',
+      xls:  'application/vnd.ms-excel',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    };
+
+    var user = null;
+
+    var file = null;       // the chosen file
+    var info = null;       // { ext, columns, preview, rowCount }
+    var reading = false;   // a file is being read right now
+    var dirty = false;
+    var finished = false;
+
+    var form = $('upload-form');
+    var submitBtn = $('submit-btn');
+    var formError = $('form-error');
+
+    var chooseBtn = $('choose-file');
+    var removeBtn = $('remove-file');
+    var fileInput = $('file-input');
+    var fileError = $('file-error');
+
+    var titleInput = $('title');
+    var descInput = $('description');
+    var categoryInput = $('category');
+    var licenseInput = $('license');
+    var tagsInput = $('tags');
+    var rightsInput = $('rights');
+
+    /* ---------- Small helpers ---------- */
+    function showView(name) {
+      $('loading-view').classList.toggle('hidden', name !== 'loading');
+      $('setup-view').classList.toggle('hidden', name !== 'setup');
+      $('form-view').classList.toggle('hidden', name !== 'form');
+      $('done-view').classList.toggle('hidden', name !== 'done');
+    }
+
+    function extOf(name) {
+      var parts = String(name || '').toLowerCase().split('.');
+      return parts.length > 1 ? parts[parts.length - 1] : '';
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1048576) return (bytes / 1024).toFixed(0) + ' KB';
+      return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    function clip(value) {
+      var text = value == null ? '' : (typeof value === 'object' ? JSON.stringify(value) : String(value));
+      text = text.replace(/\s+/g, ' ').trim();
+      return text.length > CELL_MAX ? text.slice(0, CELL_MAX - 3) + '...' : text;
+    }
+
+    function setFileError(message) {
+      fileError.textContent = message || '';
+      fileError.classList.toggle('hidden', !message);
+    }
+
+    function showFormError(message) {
+      formError.textContent = message;
+      formError.classList.remove('hidden');
+      formError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    /* ---------- Read a CSV ---------- */
+    function readCsv(f) {
+      return new Promise(function (resolve, reject) {
+        var fullScan = f.size <= CSV_FULL_SCAN_MAX;
+        var rows = [];
+        var count = 0;
+
+        Papa.parse(f, {
+          header: false,
+          skipEmptyLines: 'greedy',
+          preview: fullScan ? 0 : PREVIEW_ROWS + 1,
+          chunk: function (results) {
+            var data = results.data || [];
+            for (var i = 0; i < data.length; i++) {
+              count++;
+              if (rows.length < PREVIEW_ROWS + 1) rows.push(data[i]);
+            }
+          },
+          complete: function () { resolve({ rows: rows, count: count, full: fullScan }); },
+          error: function (err) { reject(err); }
+        });
+      });
+    }
+
+    function buildFromRows(rows, total, full) {
+      if (!rows.length) throw new Error('That file looks empty.');
+
+      var header = rows[0].map(function (cell, i) {
+        var name = clip(cell).slice(0, 60);
+        return name || 'column_' + (i + 1);
+      }).slice(0, MAX_COLUMNS);
+
+      if (!header.length) throw new Error('Could not find any columns in that file.');
+
+      var body = rows.slice(1, PREVIEW_ROWS + 1).map(function (row) {
+        return header.slice(0, PREVIEW_COLUMNS).map(function (_, i) { return clip(row[i]); });
+      });
+
+      return {
+        columns: header,
+        preview: body,
+        rowCount: full ? Math.max(0, total - 1) : null
+      };
+    }
+
+    /* ---------- Read a JSON file ---------- */
+    async function readJson(f) {
+      if (f.size > JSON_PARSE_MAX) {
+        return { columns: [], preview: [], rowCount: null, note: 'This JSON file is large, so no preview is shown.' };
+      }
+
+      var parsed;
+      try {
+        parsed = JSON.parse(await f.text());
+      } catch (e) {
+        throw new Error('That JSON file is not valid. Please check it and try again.');
+      }
+
+      if (!Array.isArray(parsed) || !parsed.length || typeof parsed[0] !== 'object' || parsed[0] === null) {
+        return { columns: [], preview: [], rowCount: Array.isArray(parsed) ? parsed.length : null,
+                 note: 'No preview is shown, because the file is not a list of records.' };
+      }
+
+      var keys = [];
+      var seen = {};
+      parsed.slice(0, 50).forEach(function (item) {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return;
+        Object.keys(item).forEach(function (k) {
+          if (!seen[k] && keys.length < MAX_COLUMNS) { seen[k] = true; keys.push(k.slice(0, 60)); }
+        });
+      });
+
+      if (!keys.length) {
+        return { columns: [], preview: [], rowCount: parsed.length, note: 'No preview is shown, because no fields were found.' };
+      }
+
+      var body = parsed.slice(0, PREVIEW_ROWS).map(function (item) {
+        return keys.slice(0, PREVIEW_COLUMNS).map(function (k) { return clip(item ? item[k] : ''); });
+      });
+
+      return { columns: keys, preview: body, rowCount: parsed.length };
+    }
+
+    /* ---------- Show the preview ---------- */
+    function renderPreview(result, note) {
+      var box = $('preview-box');
+      var table = $('preview-table');
+      table.innerHTML = '';
+
+      if (!result.columns.length) {
+        $('preview-meta').textContent = note || 'No preview is available for this file type. It will still be uploaded and downloadable.';
+        box.classList.remove('hidden');
+        table.parentNode.classList.add('hidden');
+        return;
+      }
+
+      table.parentNode.classList.remove('hidden');
+
+      var shown = result.columns.slice(0, PREVIEW_COLUMNS);
+      var meta = result.columns.length + (result.columns.length === 1 ? ' column' : ' columns');
+      if (result.rowCount != null) meta += ', ' + result.rowCount.toLocaleString() + (result.rowCount === 1 ? ' row' : ' rows');
+      if (result.columns.length > PREVIEW_COLUMNS) meta += ' (preview shows the first ' + PREVIEW_COLUMNS + ' columns)';
+      $('preview-meta').textContent = meta;
+
+      var thead = document.createElement('thead');
+      var headRow = document.createElement('tr');
+      shown.forEach(function (name) {
+        var th = document.createElement('th');
+        th.textContent = name;
+        headRow.appendChild(th);
+      });
+      thead.appendChild(headRow);
+
+      var tbody = document.createElement('tbody');
+      result.preview.forEach(function (row) {
+        var tr = document.createElement('tr');
+        row.forEach(function (cell) {
+          var td = document.createElement('td');
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      box.classList.remove('hidden');
+    }
+
+    function clearFile() {
+      file = null;
+      info = null;
+      fileInput.value = '';
+      $('file-info').classList.add('hidden');
+      removeBtn.classList.add('hidden');
+      $('preview-box').classList.add('hidden');
+      chooseBtn.textContent = 'Choose file';
+    }
+
+    /* ---------- Choose a file ---------- */
+    chooseBtn.addEventListener('click', function () { fileInput.click(); });
+    removeBtn.addEventListener('click', function () { clearFile(); setFileError(''); });
+
+    fileInput.addEventListener('change', async function () {
+      var chosen = fileInput.files && fileInput.files[0];
+      if (!chosen) return;
+
+      setFileError('');
+      var ext = extOf(chosen.name);
+
+      if (!TYPES[ext]) {
+        setFileError('Use a CSV, JSON, Excel (XLS or XLSX) or ZIP file.');
+        fileInput.value = '';
+        return;
+      }
+      if (chosen.size <= 0) {
+        setFileError('That file is empty.');
+        fileInput.value = '';
+        return;
+      }
+      if (chosen.size > MAX_BYTES) {
+        setFileError('That file is ' + formatBytes(chosen.size) + '. The limit is 50 MB.');
+        fileInput.value = '';
+        return;
+      }
+
+      reading = true;
+      submitBtn.disabled = true;
+      chooseBtn.disabled = true;
+      $('preview-meta').textContent = 'Reading your file...';
+      $('preview-box').classList.remove('hidden');
+      $('preview-table').parentNode.classList.add('hidden');
+
+      try {
+        var result = { columns: [], preview: [], rowCount: null };
+        var note = '';
+
+        if (ext === 'csv') {
+          var csv = await readCsv(chosen);
+          result = buildFromRows(csv.rows, csv.count, csv.full);
+        } else if (ext === 'json') {
+          result = await readJson(chosen);
+          note = result.note || '';
+        }
+
+        file = chosen;
+        info = { ext: ext, columns: result.columns, preview: result.preview, rowCount: result.rowCount };
+        dirty = true;
+
+        $('file-name').textContent = chosen.name;
+        $('file-meta').textContent = ext.toUpperCase() + '  |  ' + formatBytes(chosen.size);
+        $('file-info').classList.remove('hidden');
+        removeBtn.classList.remove('hidden');
+        chooseBtn.textContent = 'Change file';
+
+        renderPreview(result, note);
+
+        if (!titleInput.value.trim()) {
+          var guess = chosen.name.replace(/\.[^.]+$/, '').replace(/[_\-]+/g, ' ').trim();
+          if (guess.length >= 3) titleInput.value = guess.slice(0, 120);
+        }
+      } catch (error) {
+        console.error('[Analytical] Could not read the file:', error);
+        clearFile();
+        setFileError(error && error.message ? error.message : 'Could not read that file. Please try another one.');
+      }
+
+      reading = false;
+      submitBtn.disabled = false;
+      chooseBtn.disabled = false;
+    });
+
+    /* ---------- Tags ---------- */
+    function parseTags(text) {
+      var seen = {};
+      var out = [];
+
+      String(text || '').split(/[,\n]/).forEach(function (raw) {
+        var tag = raw.trim().toLowerCase().replace(/\s+/g, ' ');
+        if (!tag || seen[tag]) return;
+        seen[tag] = true;
+        out.push(tag);
+      });
+
+      return out;
+    }
+
+    function renderTags() {
+      var wrap = $('tags-preview');
+      wrap.innerHTML = '';
+
+      parseTags(tagsInput.value).forEach(function (tag) {
+        var el = document.createElement('span');
+        el.className = 'tag';
+        el.textContent = tag;
+        wrap.appendChild(el);
+      });
+    }
+
+    tagsInput.addEventListener('input', renderTags);
+
+    /* ---------- Validation ---------- */
+    var rules = [
+      {
+        input: titleInput,
+        check: function () {
+          var v = titleInput.value.trim();
+          if (v.length < 3) return 'The title must be at least 3 characters.';
+          if (v.length > 120) return 'The title must be 120 characters or fewer.';
+          return '';
+        }
+      },
+      {
+        input: descInput,
+        check: function () {
+          var v = descInput.value.trim();
+          if (v.length < 10) return 'The description must be at least 10 characters.';
+          if (v.length > 5000) return 'The description must be 5000 characters or fewer.';
+          return '';
+        }
+      },
+      { input: categoryInput, check: function () { return categoryInput.value ? '' : 'Select a category.'; } },
+      { input: licenseInput, check: function () { return licenseInput.value ? '' : 'Select a licence.'; } },
+      {
+        input: tagsInput,
+        check: function () {
+          var list = parseTags(tagsInput.value);
+          if (list.length > 10) return 'Add up to 10 tags.';
+          for (var i = 0; i < list.length; i++) {
+            if (list[i].length > 30) return 'Each tag must be 30 characters or fewer.';
+          }
+          return '';
+        }
+      },
+      { input: rightsInput, check: function () { return rightsInput.checked ? '' : 'You must confirm this to publish.'; } }
+    ];
+
+    rules.forEach(function (rule) {
+      var eventName = (rule.input === categoryInput || rule.input === licenseInput || rule.input === rightsInput) ? 'change' : 'blur';
+
+      rule.input.addEventListener(eventName, function () {
+        Utils.showFieldError(rule.input, rule.check());
+      });
+
+      rule.input.addEventListener('input', function () {
+        if (rule.input.classList.contains('is-invalid')) {
+          Utils.showFieldError(rule.input, rule.check());
+        }
+      });
+    });
+
+    function validateAll() {
+      var firstBad = null;
+
+      if (!file) {
+        setFileError('Choose a file to upload.');
+        firstBad = chooseBtn;
+      }
+
+      rules.forEach(function (rule) {
+        var message = rule.check();
+        Utils.showFieldError(rule.input, message);
+        if (message && !firstBad) firstBad = rule.input;
+      });
+
+      if (firstBad) firstBad.focus();
+      return !firstBad;
+    }
+
+    /* ---------- Unsaved changes warning ---------- */
+    form.addEventListener('input', function () { dirty = true; });
+
+    window.addEventListener('beforeunload', function (e) {
+      if (!dirty || finished) return;
+      e.preventDefault();
+      e.returnValue = '';
+    });
+
+    /* ---------- Messages for common upload problems ---------- */
+    function uploadMessage(error) {
+      var raw = String((error && error.message) || '').toLowerCase();
+      if (raw.indexOf('maximum allowed size') !== -1 || raw.indexOf('too large') !== -1) return 'That file is larger than 50 MB.';
+      if (raw.indexOf('mime') !== -1) return 'That file type is not accepted.';
+      if (raw.indexOf('already exists') !== -1) return 'That upload clashed with an earlier one. Please try again.';
+      return sbHelpers.friendlyError(error);
+    }
+
+    function newName() {
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    }
+
+    /* ---------- Publish ---------- */
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      formError.classList.add('hidden');
+
+      if (reading) return;
+      if (!validateAll()) return;
+
+      UI.setLoading(submitBtn, true);
+      $('upload-note').textContent = 'Uploading. Please keep this page open, large files can take a while.';
+
+      var path = user.id + '/' + newName() + '.' + info.ext;
+
+      /* 1. Upload the file to private storage */
+      var upload = await sb.storage.from(BUCKET).upload(path, file, {
+        contentType: TYPES[info.ext],
+        cacheControl: '3600',
+        upsert: false
+      });
+
+      if (upload.error) {
+        UI.setLoading(submitBtn, false);
+        $('upload-note').textContent = '';
+        showFormError('Could not upload your file. ' + uploadMessage(upload.error));
+        return;
+      }
+
+      /* 2. Save the listing */
+      var row = {
+        owner_id: user.id,
+        title: titleInput.value.trim(),
+        description: descInput.value.trim(),
+        category: categoryInput.value,
+        license: licenseInput.value,
+        tags: parseTags(tagsInput.value),
+        price_amount: 0,
+        currency: APP_CONFIG.region.defaultCurrency,
+        file_path: path,
+        file_name: file.name.slice(0, 200),
+        file_size: file.size,
+        file_type: info.ext,
+        columns: info.columns,
+        preview: info.preview,
+        row_count: info.rowCount,
+        status: 'published'
+      };
+
+      var result = await sb.from('datasets').insert(row).select('id').single();
+
+      if (result.error) {
+        // Do not leave an unused file behind
+        await sb.storage.from(BUCKET).remove([path]);
+
+        UI.setLoading(submitBtn, false);
+        $('upload-note').textContent = '';
+        showFormError(sbHelpers.friendlyError(result.error));
+        return;
+      }
+
+      finished = true;
+      UI.setLoading(submitBtn, false);
+      $('view-link').href = '/pages/data/dataset.html?id=' + encodeURIComponent(result.data.id);
+      showView('done');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    /* ---------- Protect the page, check the database, then show it ---------- */
+    async function start() {
+      var context = await Auth.requireAuth();
+      if (!context) return; // not logged in: sent to the login page
+
+      user = context.user;
+
+      // Confirm the datasets table exists
+      var check = await sb.from('datasets').select('id', { head: true, count: 'exact' });
+
+      if (check.error) {
+        var text = String(check.error.message || '').toLowerCase();
+        var missing =
+          check.error.code === '42P01' ||
+          check.error.code === 'PGRST205' ||
+          text.indexOf('does not exist') !== -1 ||
+          text.indexOf('could not find the table') !== -1;
+
+        if (missing) {
+          showView('setup');
+          return;
+        }
+      }
+
+      showView('form');
+    }
+
+    start();
+  })();
+</script>
+</body>
+</html>
