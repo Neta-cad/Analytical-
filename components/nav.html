@@ -73,6 +73,116 @@
   </div>
 </header>
 
+<!-- ==========================================================
+     nav.html — top navigation + mobile drawer
+     Loaded into every page by assets/js/components.js.
+     Links tagged data-feature only show when that feature is
+     switched on in config.js.
+     ========================================================== -->
+
+<header class="site-nav">
+  <div class="container nav-inner">
+
+    <a class="nav-brand" href="/index.html" aria-label="Analytical home">
+      <span class="nav-brand-mark" data-brand-letter>A</span>
+      <span data-brand-name>Analytical</span>
+    </a>
+
+    <ul class="nav-links" role="list">
+      <li data-feature="marketplace"><a class="nav-link" href="/pages/marketplace/browse.html">Marketplace</a></li>
+      <li data-feature="jobs"><a class="nav-link" href="/pages/jobs/browse.html">Jobs</a></li>
+      <li data-feature="qa"><a class="nav-link" href="/pages/qa/index.html">Q&amp;A</a></li>
+      <li data-feature="learn"><a class="nav-link" href="/pages/learn/courses.html">Learn</a></li>
+      <li data-feature="community"><a class="nav-link" href="/pages/community/groups.html">Community</a></li>
+      <li data-feature="data"><a class="nav-link" href="/pages/data/datasets.html">Data</a></li>
+    </ul>
+
+    <div class="nav-actions">
+
+      <a class="nav-icon-btn" href="/pages/search.html" data-feature="search" aria-label="Search">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="m20 20-3.5-3.5"></path>
+        </svg>
+      </a>
+
+      <button class="nav-icon-btn" type="button" data-theme-toggle aria-label="Switch theme" aria-pressed="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 3v18"></path>
+          <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"></path>
+        </svg>
+      </button>
+
+      <!-- Shown when logged out (desktop) -->
+      <div class="nav-auth-desktop" data-auth="out">
+        <a class="btn btn-ghost btn-sm" href="/pages/auth/login.html">Log in</a>
+        <a class="btn btn-primary btn-sm" href="/pages/auth/register.html">Create account</a>
+      </div>
+
+      <!-- Shown when logged in -->
+      <div class="nav-user hidden" data-auth="in">
+        <button class="nav-avatar" type="button" data-user-toggle data-user-avatar
+                aria-label="Account menu" aria-haspopup="true" aria-expanded="false">?</button>
+
+        <div class="nav-dropdown" data-user-menu role="menu">
+          <div style="padding: var(--sp-2) var(--sp-3) var(--sp-1);">
+            <div class="fw-600 truncate" data-user-name>Member</div>
+            <div class="text-xs text-muted truncate" data-user-username></div>
+          </div>
+          <hr>
+          <a href="/pages/dashboard/index.html" role="menuitem">Dashboard</a>
+          <a href="/pages/profile/view.html" role="menuitem">My profile</a>
+          <a href="/pages/profile/edit.html" role="menuitem">Edit profile</a>
+          <a href="/pages/data/my.html" data-feature="data" role="menuitem">My datasets</a>
+          <hr>
+          <button type="button" data-logout role="menuitem">Log out</button>
+        </div>
+      </div>
+
+      <button class="nav-toggle" type="button" data-nav-toggle
+              aria-label="Open menu" aria-expanded="false" aria-controls="nav-drawer">
+        <span class="nav-toggle-bars"></span>
+      </button>
+
+    </div>
+  </div>
+</header>
+
+<!-- The drawer sits OUTSIDE the header on purpose: the header uses a blur
+     effect, which would break a fixed-position child. -->
+<div class="nav-drawer" id="nav-drawer" data-nav-drawer>
+
+  <div class="nav-drawer-group" data-feature-group>
+    <div class="nav-drawer-title">Explore</div>
+    <a class="nav-link" data-feature="marketplace" href="/pages/marketplace/browse.html">Marketplace</a>
+    <a class="nav-link" data-feature="jobs" href="/pages/jobs/browse.html">Jobs</a>
+    <a class="nav-link" data-feature="qa" href="/pages/qa/index.html">Q&amp;A</a>
+    <a class="nav-link" data-feature="learn" href="/pages/learn/courses.html">Learn</a>
+    <a class="nav-link" data-feature="community" href="/pages/community/groups.html">Community</a>
+    <a class="nav-link" data-feature="data" href="/pages/data/datasets.html">Data</a>
+    <a class="nav-link" data-feature="search" href="/pages/search.html">Search</a>
+  </div>
+
+  <div class="nav-drawer-group hidden" data-auth="in">
+    <div class="nav-drawer-title">Your account</div>
+    <a class="nav-link" href="/pages/dashboard/index.html">Dashboard</a>
+    <a class="nav-link" href="/pages/profile/view.html">My profile</a>
+    <a class="nav-link" href="/pages/profile/edit.html">Edit profile</a>
+    <a class="nav-link" data-feature="data" href="/pages/data/my.html">My datasets</a>
+  </div>
+
+  <div class="nav-drawer-actions">
+    <div data-auth="out" style="display: grid; gap: var(--sp-2);">
+      <a class="btn btn-primary btn-block" href="/pages/auth/register.html">Create account</a>
+      <a class="btn btn-secondary btn-block" href="/pages/auth/login.html">Log in</a>
+    </div>
+
+    <button class="btn btn-secondary btn-block hidden" type="button" data-auth="in" data-logout>Log out</button>
+  </div>
+
+</div>
+
 <!-- The drawer sits OUTSIDE the header on purpose: the header uses a blur
      effect, which would break a fixed-position child. -->
 <div class="nav-drawer" id="nav-drawer" data-nav-drawer>

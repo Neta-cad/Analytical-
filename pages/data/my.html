@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My datasets | Analytical</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .head-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--sp-4);
+    }
+
+    .my-list {
+      display: grid;
+      gap: var(--sp-3);
+    }
+
+    .my-item-body {
+      display: grid;
+      gap: var(--sp-3);
+      padding: var(--sp-4) var(--sp-5);
+    }
+
+    .my-item-top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+    }
+
+    .my-item-title {
+      font-family: var(--font-sans);
+      font-size: var(--fs-md);
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .my-item-title a {
+      color: var(--text);
+    }
+
+    .my-item-title a:hover {
+      color: var(--brand-400);
+    }
+
+    .my-item-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-1) var(--sp-4);
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .my-item-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+      padding-top: var(--sp-3);
+      border-top: 1px solid var(--border);
+    }
+
+    .stack > * + * {
+      margin-top: var(--sp-4);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <section class="page-header">
+      <div class="container">
+        <div class="head-row">
+          <div>
+            <h1>My datasets</h1>
+            <p>Manage the data you have shared with the community.</p>
+          </div>
+          <a class="btn btn-primary" href="/pages/data/upload.html">Upload a dataset</a>
+        </div>
+      </div>
+    </section>
+
+    <section style="padding-block: var(--sp-6);">
+      <div class="container">
+
+        <!-- Loading -->
+        <div class="loading-block" id="loading-view" style="min-height: 40vh;">
+          <div class="spinner spinner-lg" role="status" aria-label="Loading your datasets"></div>
+        </div>
+
+        <!-- Database not set up, or a load problem -->
+        <div class="hidden" id="problem-view">
+          <div class="empty-state">
+            <h3 id="problem-title">Could not load your datasets</h3>
+            <p id="problem-text"></p>
+            <button class="btn btn-primary" type="button" onclick="window.location.reload()">Refresh</button>
+          </div>
+        </div>
+
+        <!-- Nothing uploaded yet -->
+        <div class="hidden" id="empty-view">
+          <div class="empty-state">
+            <h3>You have not uploaded any datasets yet</h3>
+            <p>Share your first dataset and it will appear here, with its download count.</p>
+            <a class="btn btn-primary" href="/pages/data/upload.html">Upload a dataset</a>
+          </div>
+        </div>
+
+        <!-- The page -->
+        <div class="stack hidden" id="main-view">
+
+          <div class="grid-3">
+            <div class="card"><div class="card-body stat-card">
+              <div class="stat-label">Datasets</div>
+              <div class="stat-value" id="stat-total">0</div>
+              <div class="stat-note">All your uploads</div>
+            </div></div>
+
+            <div class="card"><div class="card-body stat-card">
+              <div class="stat-label">Published</div>
+              <div class="stat-value" id="stat-published">0</div>
+              <div class="stat-note">Visible to everyone</div>
+            </div></div>
+
+            <div class="card"><div class="card-body stat-card">
+              <div class="stat-label">Total downloads</div>
+              <div class="stat-value" id="stat-downloads">0</div>
+              <div class="stat-note">Across all datasets</div>
+            </div></div>
+          </div>
+
+          <div class="my-list" id="my-list"></div>
+
+          <p class="text-xs text-muted hidden" id="limit-note">Showing your 100 most recent datasets.</p>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Edit dataset window -->
+<div class="modal-backdrop" id="edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-heading" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="edit-heading" style="font-size: var(--fs-lg);">Edit dataset</h2>
+      <button class="btn btn-ghost btn-sm" type="button" data-modal-close aria-label="Close">Close</button>
+    </div>
+
+    <form id="edit-form" novalidate>
+      <div class="modal-body">
+
+        <div class="alert alert-danger hidden" id="edit-error" role="alert" style="margin-bottom: var(--sp-4);"></div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-title">Title <span class="req">*</span></label>
+          <input class="input" id="edit-title" type="text" maxlength="120">
+          <p class="form-error hidden" id="edit-title-error"></p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="edit-description">Description <span class="req">*</span></label>
+          <textarea class="textarea" id="edit-description" maxlength="5000" style="min-height: 130px;"></textarea>
+          <p class="form-error hidden" id="edit-description-error"></p>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="edit-category">Category <span class="req">*</span></label>
+            <select class="select" id="edit-category"></select>
+            <p class="form-error hidden" id="edit-category-error"></p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="edit-license">Licence <span class="req">*</span></label>
+            <select class="select" id="edit-license"></select>
+            <p class="form-error hidden" id="edit-license-error"></p>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="edit-tags">Tags</label>
+          <input class="input" id="edit-tags" type="text" autocapitalize="none"
+                 placeholder="e.g. weather, nigeria, time series">
+          <p class="form-hint">Separate tags with commas. Up to 10 tags, 30 characters each.</p>
+          <p class="form-error hidden" id="edit-tags-error"></p>
+        </div>
+
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-secondary" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" id="edit-save">Save changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- My datasets behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Auth || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var BUCKET = 'datasets';
+    var LIMIT = 100;
+
+    var COLUMNS =
+      'id, title, description, category, tags, license, file_path, file_name, ' +
+      'file_type, file_size, row_count, download_count, status, created_at, ' +
+      'price_amount, currency';
+
+    var CATEGORIES = {
+      business: 'Business', finance: 'Finance', health: 'Health', education: 'Education',
+      technology: 'Technology', science: 'Science', agriculture: 'Agriculture',
+      environment: 'Environment', transport: 'Transport', government: 'Government',
+      social: 'Social', sports: 'Sports', entertainment: 'Entertainment', other: 'Other'
+    };
+
+    var LICENSES = {
+      'cc-by': 'CC BY: reuse with credit',
+      'cc0': 'CC0: public domain, no conditions',
+      'cc-by-sa': 'CC BY-SA: credit, share alike',
+      'cc-by-nc': 'CC BY-NC: credit, non-commercial only',
+      'odbl': 'ODbL: open database licence',
+      'custom': 'Custom: explain in the description'
+    };
+
+    var user = null;
+    var items = [];
+    var editing = null;
+
+    var editForm = $('edit-form');
+    var editError = $('edit-error');
+    var editSave = $('edit-save');
+
+    var titleInput = $('edit-title');
+    var descInput = $('edit-description');
+    var categoryInput = $('edit-category');
+    var licenseInput = $('edit-license');
+    var tagsInput = $('edit-tags');
+
+    /* ---------- Small helpers ---------- */
+    function showView(name) {
+      $('loading-view').classList.toggle('hidden', name !== 'loading');
+      $('problem-view').classList.toggle('hidden', name !== 'problem');
+      $('empty-view').classList.toggle('hidden', name !== 'empty');
+      $('main-view').classList.toggle('hidden', name !== 'main');
+    }
+
+    function formatBytes(bytes) {
+      var n = Number(bytes) || 0;
+      if (n < 1024) return n + ' B';
+      if (n < 1048576) return (n / 1024).toFixed(0) + ' KB';
+      return (n / 1048576).toFixed(1) + ' MB';
+    }
+
+    function findItem(id) {
+      for (var i = 0; i < items.length; i++) {
+        if (items[i].id === id) return items[i];
+      }
+      return null;
+    }
+
+    function fillSelect(select, options, placeholder) {
+      select.innerHTML = '';
+      if (placeholder) {
+        var first = document.createElement('option');
+        first.value = '';
+        first.textContent = placeholder;
+        select.appendChild(first);
+      }
+      Object.keys(options).forEach(function (key) {
+        var opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = options[key];
+        select.appendChild(opt);
+      });
+    }
+
+    fillSelect(categoryInput, CATEGORIES, 'Select a category');
+    fillSelect(licenseInput, LICENSES, '');
+
+    /* ---------- Tags ---------- */
+    function parseTags(text) {
+      var seen = {};
+      var out = [];
+
+      String(text || '').split(/[,\n]/).forEach(function (raw) {
+        var tag = raw.trim().toLowerCase().replace(/\s+/g, ' ');
+        if (!tag || seen[tag]) return;
+        seen[tag] = true;
+        out.push(tag);
+      });
+
+      return out;
+    }
+
+    /* ---------- Totals ---------- */
+    function renderStats() {
+      var published = 0;
+      var downloads = 0;
+
+      items.forEach(function (d) {
+        if (d.status === 'published') published++;
+        downloads += Number(d.download_count) || 0;
+      });
+
+      $('stat-total').textContent = Utils.formatNumber(items.length);
+      $('stat-published').textContent = Utils.formatNumber(published);
+      $('stat-downloads').textContent = Utils.formatNumber(downloads);
+    }
+
+    /* ---------- One dataset row ---------- */
+    function button(label, className, action, id) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-sm ' + className;
+      btn.textContent = label;
+      btn.setAttribute('data-action', action);
+      btn.setAttribute('data-id', id);
+      return btn;
+    }
+
+    function buildItem(d) {
+      var card = document.createElement('div');
+      card.className = 'card';
+
+      var body = document.createElement('div');
+      body.className = 'my-item-body';
+
+      var top = document.createElement('div');
+      top.className = 'my-item-top';
+
+      var status = document.createElement('span');
+      if (d.status === 'published') {
+        status.className = 'badge badge-success';
+        status.textContent = 'Published';
+      } else if (d.status === 'draft') {
+        status.className = 'badge';
+        status.textContent = 'Draft';
+      } else {
+        status.className = 'badge badge-danger';
+        status.textContent = 'Removed by staff';
+      }
+      top.appendChild(status);
+
+      var cat = document.createElement('span');
+      cat.className = 'badge badge-brand';
+      cat.textContent = CATEGORIES[d.category] || 'Other';
+      top.appendChild(cat);
+
+      var type = document.createElement('span');
+      type.className = 'badge';
+      type.textContent = String(d.file_type || '').toUpperCase();
+      top.appendChild(type);
+
+      body.appendChild(top);
+
+      var title = document.createElement('h2');
+      title.className = 'my-item-title';
+      var link = document.createElement('a');
+      link.href = '/pages/data/dataset.html?id=' + encodeURIComponent(d.id);
+      link.textContent = d.title;
+      title.appendChild(link);
+      body.appendChild(title);
+
+      var meta = document.createElement('div');
+      meta.className = 'my-item-meta';
+      var bits = [
+        formatBytes(d.file_size),
+        (d.row_count != null ? Number(d.row_count).toLocaleString() + ' rows' : null),
+        Number(d.download_count || 0).toLocaleString() + (Number(d.download_count) === 1 ? ' download' : ' downloads'),
+        'Uploaded ' + Utils.formatDate(d.created_at)
+      ];
+      bits.forEach(function (text) {
+        if (!text) return;
+        var span = document.createElement('span');
+        span.textContent = text;
+        meta.appendChild(span);
+      });
+      body.appendChild(meta);
+
+      var actions = document.createElement('div');
+      actions.className = 'my-item-actions';
+
+      var view = document.createElement('a');
+      view.className = 'btn btn-secondary btn-sm';
+      view.href = link.href;
+      view.textContent = 'View';
+      actions.appendChild(view);
+
+      if (d.status !== 'removed') {
+        actions.appendChild(button('Edit', 'btn-secondary', 'edit', d.id));
+        actions.appendChild(button(
+          d.status === 'published' ? 'Unpublish' : 'Publish',
+          'btn-secondary',
+          'toggle',
+          d.id
+        ));
+      }
+
+      actions.appendChild(button('Delete', 'btn-ghost', 'delete', d.id));
+      body.appendChild(actions);
+
+      card.appendChild(body);
+      return card;
+    }
+
+    function renderList() {
+      var list = $('my-list');
+      list.innerHTML = '';
+      items.forEach(function (d) { list.appendChild(buildItem(d)); });
+
+      renderStats();
+      $('limit-note').classList.toggle('hidden', items.length < LIMIT);
+
+      showView(items.length ? 'main' : 'empty');
+    }
+
+    /* ---------- Actions ---------- */
+    $('my-list').addEventListener('click', function (e) {
+      var target = e.target;
+      if (!(target instanceof Element)) return;
+
+      var btn = target.closest('[data-action]');
+      if (!btn) return;
+
+      var d = findItem(btn.getAttribute('data-id'));
+      if (!d) return;
+
+      var action = btn.getAttribute('data-action');
+      if (action === 'edit') openEdit(d);
+      if (action === 'toggle') toggleStatus(d, btn);
+      if (action === 'delete') removeDataset(d, btn);
+    });
+
+    async function toggleStatus(d, btn) {
+      var next = d.status === 'published' ? 'draft' : 'published';
+
+      UI.setLoading(btn, true);
+      var result = await sb.from('datasets').update({ status: next }).eq('id', d.id).select(COLUMNS).single();
+      UI.setLoading(btn, false);
+
+      if (result.error) {
+        UI.toast.error(sbHelpers.friendlyError(result.error));
+        return;
+      }
+
+      Object.assign(d, result.data);
+      renderList();
+      UI.toast.success(next === 'published' ? 'Dataset published.' : 'Dataset unpublished. Only you can see it now.');
+    }
+
+    async function removeDataset(d, btn) {
+      var ok = await UI.confirm({
+        title: 'Delete this dataset?',
+        message: '"' + d.title + '" and its file will be removed for good. This cannot be undone.',
+        confirmText: 'Delete',
+        danger: true
+      });
+      if (!ok) return;
+
+      UI.setLoading(btn, true);
+      var result = await sb.from('datasets').delete().eq('id', d.id).select('id');
+
+      if (result.error || !result.data || !result.data.length) {
+        UI.setLoading(btn, false);
+        UI.toast.error(result.error ? sbHelpers.friendlyError(result.error) : 'Could not delete this dataset.');
+        return;
+      }
+
+      var removed = await sb.storage.from(BUCKET).remove([d.file_path]);
+      if (removed.error) console.error('[Analytical] Could not remove the file:', removed.error);
+
+      items = items.filter(function (x) { return x.id !== d.id; });
+      renderList();
+      UI.toast.success('Dataset deleted.');
+    }
+
+    /* ---------- Edit window ---------- */
+    function openEdit(d) {
+      editing = d;
+      editError.classList.add('hidden');
+
+      titleInput.value = d.title || '';
+      descInput.value = d.description || '';
+      categoryInput.value = d.category || '';
+      licenseInput.value = d.license || 'cc-by';
+      tagsInput.value = Array.isArray(d.tags) ? d.tags.join(', ') : '';
+
+      [titleInput, descInput, categoryInput, licenseInput, tagsInput].forEach(function (input) {
+        Utils.showFieldError(input, '');
+      });
+
+      UI.openModal('edit-modal');
+    }
+
+    var rules = [
+      {
+        input: titleInput,
+        check: function () {
+          var v = titleInput.value.trim();
+          if (v.length < 3) return 'The title must be at least 3 characters.';
+          if (v.length > 120) return 'The title must be 120 characters or fewer.';
+          return '';
+        }
+      },
+      {
+        input: descInput,
+        check: function () {
+          var v = descInput.value.trim();
+          if (v.length < 10) return 'The description must be at least 10 characters.';
+          if (v.length > 5000) return 'The description must be 5000 characters or fewer.';
+          return '';
+        }
+      },
+      { input: categoryInput, check: function () { return categoryInput.value ? '' : 'Select a category.'; } },
+      { input: licenseInput, check: function () { return licenseInput.value ? '' : 'Select a licence.'; } },
+      {
+        input: tagsInput,
+        check: function () {
+          var list = parseTags(tagsInput.value);
+          if (list.length > 10) return 'Add up to 10 tags.';
+          for (var i = 0; i < list.length; i++) {
+            if (list[i].length > 30) return 'Each tag must be 30 characters or fewer.';
+          }
+          return '';
+        }
+      }
+    ];
+
+    rules.forEach(function (rule) {
+      var eventName = (rule.input === categoryInput || rule.input === licenseInput) ? 'change' : 'blur';
+
+      rule.input.addEventListener(eventName, function () {
+        Utils.showFieldError(rule.input, rule.check());
+      });
+
+      rule.input.addEventListener('input', function () {
+        if (rule.input.classList.contains('is-invalid')) {
+          Utils.showFieldError(rule.input, rule.check());
+        }
+      });
+    });
+
+    function validateEdit() {
+      var firstBad = null;
+
+      rules.forEach(function (rule) {
+        var message = rule.check();
+        Utils.showFieldError(rule.input, message);
+        if (message && !firstBad) firstBad = rule.input;
+      });
+
+      if (firstBad) firstBad.focus();
+      return !firstBad;
+    }
+
+    editForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      editError.classList.add('hidden');
+
+      if (!editing || !validateEdit()) return;
+
+      UI.setLoading(editSave, true);
+
+      var update = {
+        title: titleInput.value.trim(),
+        description: descInput.value.trim(),
+        category: categoryInput.value,
+        license: licenseInput.value,
+        tags: parseTags(tagsInput.value)
+      };
+
+      var result = await sb.from('datasets').update(update).eq('id', editing.id).select(COLUMNS).single();
+      UI.setLoading(editSave, false);
+
+      if (result.error) {
+        editError.textContent = sbHelpers.friendlyError(result.error);
+        editError.classList.remove('hidden');
+        return;
+      }
+
+      Object.assign(editing, result.data);
+      editing = null;
+      UI.closeModal('edit-modal');
+      renderList();
+      UI.toast.success('Changes saved.');
+    });
+
+    /* ---------- Protect the page, then load ---------- */
+    async function start() {
+      var context = await Auth.requireAuth();
+      if (!context) return; // not logged in: sent to the login page
+
+      user = context.user;
+
+      var result = await sb
+        .from('datasets')
+        .select(COLUMNS)
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: false })
+        .range(0, LIMIT - 1);
+
+      if (result.error) {
+        console.error('[Analytical] Could not load your datasets:', result.error);
+
+        var text = String(result.error.message || '').toLowerCase();
+        var missing =
+          result.error.code === '42P01' ||
+          result.error.code === 'PGRST205' ||
+          text.indexOf('does not exist') !== -1 ||
+          text.indexOf('could not find the table') !== -1;
+
+        $('problem-title').textContent = missing ? 'Datasets are not set up yet' : 'Could not load your datasets';
+        $('problem-text').textContent = missing
+          ? 'Run the datasets.sql file in the Supabase SQL Editor, then refresh this page.'
+          : sbHelpers.friendlyError(result.error);
+        showView('problem');
+        return;
+      }
+
+      items = result.data || [];
+      renderList();
+    }
+
+    start();
+  })();
+</script>
+</body>
+</html>
