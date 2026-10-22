@@ -85,6 +85,58 @@
       border-top: 1px solid var(--border);
     }
 
+    .earn-grid {
+      display: grid;
+      gap: var(--sp-4);
+      grid-template-columns: 1fr 1fr;
+    }
+
+    @media (min-width: 768px) {
+      .earn-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    .earn-value {
+      font-family: var(--font-display);
+      font-size: var(--fs-xl);
+      font-weight: 600;
+      color: var(--brand-400);
+      line-height: 1.15;
+      word-break: break-word;
+    }
+
+    [data-theme="light"] .earn-value {
+      color: var(--brand-800);
+    }
+
+    .earn-label {
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .price-choices {
+      display: grid;
+      gap: var(--sp-2);
+    }
+
+    .price-input-wrap {
+      position: relative;
+      max-width: 260px;
+    }
+
+    .price-input-wrap .currency-mark {
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-weight: 600;
+      pointer-events: none;
+    }
+
+    .price-input-wrap .input {
+      padding-left: 2rem;
+    }
+
     .stack > * + * {
       margin-top: var(--sp-4);
     }
@@ -103,7 +155,7 @@
         <div class="head-row">
           <div>
             <h1>My datasets</h1>
-            <p>Manage the data you have shared with the community.</p>
+            <p>Manage the data you have shared, set prices and see what you have earned.</p>
           </div>
           <a class="btn btn-primary" href="/pages/data/upload.html">Upload a dataset</a>
         </div>
@@ -131,7 +183,7 @@
         <div class="hidden" id="empty-view">
           <div class="empty-state">
             <h3>You have not uploaded any datasets yet</h3>
-            <p>Share your first dataset and it will appear here, with its download count.</p>
+            <p>Share your first dataset, free or paid, and it will appear here with its downloads and sales.</p>
             <a class="btn btn-primary" href="/pages/data/upload.html">Upload a dataset</a>
           </div>
         </div>
@@ -158,6 +210,9 @@
               <div class="stat-note">Across all datasets</div>
             </div></div>
           </div>
+
+          <!-- Real earnings, from recorded sales. Hidden until there is a sale. -->
+          <div id="earnings"></div>
 
           <div class="my-list" id="my-list"></div>
 
@@ -213,12 +268,36 @@
           </div>
         </div>
 
-        <div class="form-group" style="margin-bottom: 0;">
+        <div class="form-group">
           <label class="form-label" for="edit-tags">Tags</label>
           <input class="input" id="edit-tags" type="text" autocapitalize="none"
                  placeholder="e.g. weather, nigeria, time series">
           <p class="form-hint">Separate tags with commas. Up to 10 tags, 30 characters each.</p>
           <p class="form-error hidden" id="edit-tags-error"></p>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <span class="form-label">Price</span>
+
+          <div class="price-choices">
+            <label class="radio" for="edit-free">
+              <input type="radio" name="edit-price-type" id="edit-free" value="free" checked>
+              <span>Free</span>
+            </label>
+            <label class="radio" for="edit-paid">
+              <input type="radio" name="edit-price-type" id="edit-paid" value="paid">
+              <span>Paid</span>
+            </label>
+          </div>
+
+          <div class="hidden" id="edit-price-wrap" style="margin-top: var(--sp-3);">
+            <div class="price-input-wrap">
+              <span class="currency-mark" aria-hidden="true">&#8358;</span>
+              <input class="input" id="edit-price" type="text" inputmode="numeric" maxlength="9" placeholder="e.g. 2500" aria-label="Price in naira">
+            </div>
+            <p class="form-hint mt-2">Between &#8358;100 and &#8358;5,000,000. People who already bought this dataset keep their access.</p>
+            <p class="form-error hidden" id="edit-price-error"></p>
+          </div>
         </div>
 
       </div>
@@ -251,6 +330,8 @@
 
     var BUCKET = 'datasets';
     var LIMIT = 100;
+    var PRICE_MIN = 100;
+    var PRICE_MAX = 5000000;
 
     var COLUMNS =
       'id, title, description, category, tags, license, file_path, file_name, ' +
@@ -286,6 +367,10 @@
     var categoryInput = $('edit-category');
     var licenseInput = $('edit-license');
     var tagsInput = $('edit-tags');
+    var freeRadio = $('edit-free');
+    var paidRadio = $('edit-paid');
+    var priceWrap = $('edit-price-wrap');
+    var priceInput = $('edit-price');
 
     /* ---------- Small helpers ---------- */
     function showView(name) {
@@ -358,6 +443,74 @@
       $('stat-downloads').textContent = Utils.formatNumber(downloads);
     }
 
+    /* ---------- Earnings, from real recorded sales ---------- */
+    async function loadEarnings() {
+      var wrap = $('earnings');
+      wrap.innerHTML = '';
+
+      var result = await sb.rpc('my_earnings');
+      if (result.error) {
+        // payments.sql may not have been run yet: stay quiet
+        console.error('[Analytical] Could not load earnings:', result.error);
+        return;
+      }
+
+      var rows = (result.data || []).filter(function (r) {
+        return Number(r.sales_count) > 0 || Number(r.paid_out) > 0;
+      });
+      if (!rows.length) return;
+
+      rows.forEach(function (r) {
+        var card = document.createElement('div');
+        card.className = 'card';
+
+        var head = document.createElement('div');
+        head.className = 'card-head';
+        var title = document.createElement('h2');
+        title.style.cssText = 'font-size: var(--fs-md); font-family: var(--font-sans);';
+        title.textContent = 'Earnings in ' + r.cur;
+        head.appendChild(title);
+        card.appendChild(head);
+
+        var body = document.createElement('div');
+        body.className = 'card-body';
+
+        var grid = document.createElement('div');
+        grid.className = 'earn-grid';
+
+        [
+          ['Sales', Number(r.sales_count).toLocaleString()],
+          ['Your earnings', APP_CONFIG.formatMoney(r.net, r.cur)],
+          ['Paid out to you', APP_CONFIG.formatMoney(r.paid_out, r.cur)],
+          ['Balance', APP_CONFIG.formatMoney(r.balance, r.cur)]
+        ].forEach(function (pair) {
+          var cell = document.createElement('div');
+          var value = document.createElement('div');
+          value.className = 'earn-value';
+          value.textContent = pair[1];
+          var label = document.createElement('div');
+          label.className = 'earn-label';
+          label.textContent = pair[0];
+          cell.appendChild(value);
+          cell.appendChild(label);
+          grid.appendChild(cell);
+        });
+
+        body.appendChild(grid);
+
+        var note = document.createElement('p');
+        note.className = 'text-xs text-muted';
+        note.style.marginTop = 'var(--sp-4)';
+        note.textContent =
+          'Your earnings are your share after the platform commission (' +
+          APP_CONFIG.formatMoney(r.commission, r.cur) + ' so far). Balance is what you have earned and not yet been paid out.';
+        body.appendChild(note);
+
+        card.appendChild(body);
+        wrap.appendChild(card);
+      });
+    }
+
     /* ---------- One dataset row ---------- */
     function button(label, className, action, id) {
       var btn = document.createElement('button');
@@ -385,15 +538,20 @@
         status.textContent = 'Published';
       } else if (d.status === 'draft') {
         status.className = 'badge';
-        status.textContent = 'Draft';
+        status.textContent = 'Unpublished';
       } else {
         status.className = 'badge badge-danger';
         status.textContent = 'Removed by staff';
       }
       top.appendChild(status);
 
+      var price = document.createElement('span');
+      price.className = 'badge badge-brand';
+      price.textContent = Number(d.price_amount) > 0 ? APP_CONFIG.formatMoney(d.price_amount, d.currency) : 'Free';
+      top.appendChild(price);
+
       var cat = document.createElement('span');
-      cat.className = 'badge badge-brand';
+      cat.className = 'badge';
       cat.textContent = CATEGORIES[d.category] || 'Other';
       top.appendChild(cat);
 
@@ -496,7 +654,7 @@
 
       Object.assign(d, result.data);
       renderList();
-      UI.toast.success(next === 'published' ? 'Dataset published.' : 'Dataset unpublished. Only you can see it now.');
+      UI.toast.success(next === 'published' ? 'Dataset published.' : 'Dataset unpublished. Only you and past buyers can see it now.');
     }
 
     async function removeDataset(d, btn) {
@@ -513,7 +671,13 @@
 
       if (result.error || !result.data || !result.data.length) {
         UI.setLoading(btn, false);
-        UI.toast.error(result.error ? sbHelpers.friendlyError(result.error) : 'Could not delete this dataset.');
+
+        var raw = result.error ? String(result.error.message || '').toLowerCase() : '';
+        if (raw.indexOf('foreign key') !== -1 || raw.indexOf('violates') !== -1) {
+          UI.toast.error('This dataset has been bought, so it cannot be deleted. Unpublish it instead.', 8000);
+        } else {
+          UI.toast.error(result.error ? sbHelpers.friendlyError(result.error) : 'Could not delete this dataset.');
+        }
         return;
       }
 
@@ -524,6 +688,47 @@
       renderList();
       UI.toast.success('Dataset deleted.');
     }
+
+    /* ---------- Price fields in the edit window ---------- */
+    function isPaid() {
+      return paidRadio.checked;
+    }
+
+    function parsePrice() {
+      var raw = String(priceInput.value || '').replace(/[,\s]/g, '');
+      if (!/^\d+$/.test(raw)) return NaN;
+      return parseInt(raw, 10);
+    }
+
+    function checkPrice() {
+      if (!isPaid()) return '';
+
+      var n = parsePrice();
+      if (isNaN(n)) return 'Enter the price as a whole number of naira, for example 2500.';
+      if (n < PRICE_MIN) return 'The lowest price is \u20A6' + PRICE_MIN.toLocaleString() + '.';
+      if (n > PRICE_MAX) return 'The highest price is \u20A6' + PRICE_MAX.toLocaleString() + '.';
+      return '';
+    }
+
+    function onPriceTypeChange() {
+      priceWrap.classList.toggle('hidden', !isPaid());
+      Utils.showFieldError(priceInput, '');
+      if (isPaid()) priceInput.focus();
+    }
+
+    freeRadio.addEventListener('change', onPriceTypeChange);
+    paidRadio.addEventListener('change', onPriceTypeChange);
+
+    priceInput.addEventListener('input', function () {
+      priceInput.value = priceInput.value.replace(/[^\d,]/g, '');
+      if (priceInput.classList.contains('is-invalid')) {
+        Utils.showFieldError(priceInput, checkPrice());
+      }
+    });
+
+    priceInput.addEventListener('blur', function () {
+      Utils.showFieldError(priceInput, checkPrice());
+    });
 
     /* ---------- Edit window ---------- */
     function openEdit(d) {
@@ -536,7 +741,13 @@
       licenseInput.value = d.license || 'cc-by';
       tagsInput.value = Array.isArray(d.tags) ? d.tags.join(', ') : '';
 
-      [titleInput, descInput, categoryInput, licenseInput, tagsInput].forEach(function (input) {
+      var paid = Number(d.price_amount) > 0;
+      paidRadio.checked = paid;
+      freeRadio.checked = !paid;
+      priceInput.value = paid ? String(Number(d.price_amount)) : '';
+      priceWrap.classList.toggle('hidden', !paid);
+
+      [titleInput, descInput, categoryInput, licenseInput, tagsInput, priceInput].forEach(function (input) {
         Utils.showFieldError(input, '');
       });
 
@@ -574,10 +785,13 @@
           }
           return '';
         }
-      }
+      },
+      { input: priceInput, check: checkPrice }
     ];
 
     rules.forEach(function (rule) {
+      if (rule.input === priceInput) return; // the price field has its own events above
+
       var eventName = (rule.input === categoryInput || rule.input === licenseInput) ? 'change' : 'blur';
 
       rule.input.addEventListener(eventName, function () {
@@ -612,19 +826,30 @@
 
       UI.setLoading(editSave, true);
 
+      var paid = isPaid();
+
       var update = {
         title: titleInput.value.trim(),
         description: descInput.value.trim(),
         category: categoryInput.value,
         license: licenseInput.value,
-        tags: parseTags(tagsInput.value)
+        tags: parseTags(tagsInput.value),
+        price_amount: paid ? parsePrice() : 0
       };
+
+      if (paid) update.currency = 'NGN';
 
       var result = await sb.from('datasets').update(update).eq('id', editing.id).select(COLUMNS).single();
       UI.setLoading(editSave, false);
 
       if (result.error) {
-        editError.textContent = sbHelpers.friendlyError(result.error);
+        var raw = String(result.error.message || '').toLowerCase();
+
+        editError.textContent =
+          (paid && (raw.indexOf('price_rules') !== -1 || raw.indexOf('free_only') !== -1))
+            ? 'Paid datasets are not switched on in the database yet. Run the payments.sql file in the Supabase SQL Editor, then try again.'
+            : sbHelpers.friendlyError(result.error);
+
         editError.classList.remove('hidden');
         return;
       }
@@ -670,6 +895,8 @@
 
       items = result.data || [];
       renderList();
+
+      if (items.length) loadEarnings();
     }
 
     start();

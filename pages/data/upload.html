@@ -73,16 +73,28 @@
       text-overflow: ellipsis;
     }
 
-    .price-box {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    .price-choices {
+      display: grid;
       gap: var(--sp-3);
-      padding: var(--sp-3) var(--sp-4);
-      background: var(--bg-soft);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      font-size: var(--fs-sm);
+    }
+
+    .price-input-wrap {
+      position: relative;
+      max-width: 260px;
+    }
+
+    .price-input-wrap .currency-mark {
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-weight: 600;
+      pointer-events: none;
+    }
+
+    .price-input-wrap .input {
+      padding-left: 2rem;
     }
 
     .save-bar {
@@ -130,7 +142,7 @@
     <section class="page-header">
       <div class="container">
         <h1>Upload a dataset</h1>
-        <p>Share data with the community. Every member can find it, preview it and download it.</p>
+        <p>Share data with the community, free or for a price. Every member can find it and preview it.</p>
       </div>
     </section>
 
@@ -186,6 +198,7 @@
                   <div class="table-wrap">
                     <table class="table preview-table" id="preview-table"></table>
                   </div>
+                  <p class="form-hint mt-2">The column names and the first rows shown here are visible to everyone, including for paid datasets, so buyers know what they are getting.</p>
                 </div>
               </div>
             </div>
@@ -267,11 +280,28 @@
                 <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">3. Price</h2>
               </div>
               <div class="card-body">
-                <div class="price-box">
-                  <span>Free for everyone</span>
-                  <span class="badge badge-brand">Free</span>
+
+                <div class="price-choices">
+                  <label class="radio" for="price-free">
+                    <input type="radio" name="price-type" id="price-free" value="free" checked>
+                    <span>Free: anyone with an account can download it.</span>
+                  </label>
+                  <label class="radio" for="price-paid">
+                    <input type="radio" name="price-type" id="price-paid" value="paid">
+                    <span>Paid: buyers pay once, then download it any time.</span>
+                  </label>
                 </div>
-                <p class="form-hint mt-2">Paid datasets are coming. Free datasets you publish now will stay free.</p>
+
+                <div class="form-group hidden" id="price-wrap" style="margin: var(--sp-4) 0 0;">
+                  <label class="form-label" for="price">Price in naira <span class="req">*</span></label>
+                  <div class="price-input-wrap">
+                    <span class="currency-mark" aria-hidden="true">&#8358;</span>
+                    <input class="input" id="price" type="text" inputmode="numeric" maxlength="9" placeholder="e.g. 2500">
+                  </div>
+                  <p class="form-hint">Between &#8358;100 and &#8358;5,000,000. Buyers pay in naira through Paystack. A commission is taken from each sale and you keep the rest. Every sale is recorded in your account.</p>
+                  <p class="form-error hidden" id="price-error"></p>
+                </div>
+
               </div>
             </div>
 
@@ -282,7 +312,7 @@
                   <label class="check" for="rights">
                     <input type="checkbox" id="rights">
                     <span>
-                      I own this data or have the right to share it, and it does not contain private
+                      I own this data or have the right to share and sell it, and it does not contain private
                       personal information about people without their permission. I agree to the
                       <a href="/pages/terms.html" target="_blank" rel="noopener">Terms of Service</a>.
                     </span>
@@ -309,11 +339,12 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
               </div>
               <h2 style="font-size: var(--fs-xl);">Dataset published</h2>
-              <p class="mt-2 text-sm">Your file is saved in private storage and your listing is live.</p>
+              <p class="mt-2 text-sm" id="done-text">Your file is saved in private storage and your listing is live.</p>
 
               <div class="mt-6" style="display: grid; gap: var(--sp-2);">
                 <a class="btn btn-primary btn-block" id="view-link" href="/pages/data/datasets.html">View your dataset</a>
-                <a class="btn btn-secondary btn-block" href="/pages/data/upload.html">Upload another</a>
+                <a class="btn btn-secondary btn-block" href="/pages/data/my.html">My datasets</a>
+                <a class="btn btn-ghost btn-block" href="/pages/data/upload.html">Upload another</a>
               </div>
             </div>
           </div>
@@ -350,13 +381,16 @@
     function $(id) { return document.getElementById(id); }
 
     var BUCKET = 'datasets';
-    var MAX_BYTES = 52428800;               // 50 MB, matches the database and bucket
+    var MAX_BYTES = 52428800;                 // 50 MB, matches the database and bucket
     var CSV_FULL_SCAN_MAX = 15 * 1024 * 1024; // count rows only for files up to 15 MB
     var JSON_PARSE_MAX = 5 * 1024 * 1024;     // read JSON structure only up to 5 MB
     var MAX_COLUMNS = 200;
     var PREVIEW_ROWS = 5;
     var PREVIEW_COLUMNS = 30;
     var CELL_MAX = 100;
+
+    var PRICE_MIN = 100;                      // naira, matches the database rule
+    var PRICE_MAX = 5000000;
 
     // The file type comes from the extension. Some phones report CSV files wrongly.
     var TYPES = {
@@ -390,6 +424,11 @@
     var licenseInput = $('license');
     var tagsInput = $('tags');
     var rightsInput = $('rights');
+
+    var freeRadio = $('price-free');
+    var paidRadio = $('price-paid');
+    var priceWrap = $('price-wrap');
+    var priceInput = $('price');
 
     /* ---------- Small helpers ---------- */
     function showView(name) {
@@ -426,6 +465,48 @@
       formError.classList.remove('hidden');
       formError.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+
+    /* ---------- Price ---------- */
+    function isPaid() {
+      return paidRadio.checked;
+    }
+
+    function parsePrice() {
+      var raw = String(priceInput.value || '').replace(/[,\s]/g, '');
+      if (!/^\d+$/.test(raw)) return NaN;
+      return parseInt(raw, 10);
+    }
+
+    function checkPrice() {
+      if (!isPaid()) return '';
+
+      var n = parsePrice();
+      if (isNaN(n)) return 'Enter the price as a whole number of naira, for example 2500.';
+      if (n < PRICE_MIN) return 'The lowest price is \u20A6' + PRICE_MIN.toLocaleString() + '.';
+      if (n > PRICE_MAX) return 'The highest price is \u20A6' + PRICE_MAX.toLocaleString() + '.';
+      return '';
+    }
+
+    function onPriceTypeChange() {
+      priceWrap.classList.toggle('hidden', !isPaid());
+      Utils.showFieldError(priceInput, '');
+      if (isPaid()) priceInput.focus();
+      dirty = true;
+    }
+
+    freeRadio.addEventListener('change', onPriceTypeChange);
+    paidRadio.addEventListener('change', onPriceTypeChange);
+
+    priceInput.addEventListener('input', function () {
+      priceInput.value = priceInput.value.replace(/[^\d,]/g, '');
+      if (priceInput.classList.contains('is-invalid')) {
+        Utils.showFieldError(priceInput, checkPrice());
+      }
+    });
+
+    priceInput.addEventListener('blur', function () {
+      Utils.showFieldError(priceInput, checkPrice());
+    });
 
     /* ---------- Read a CSV ---------- */
     function readCsv(f) {
@@ -701,10 +782,13 @@
           return '';
         }
       },
+      { input: priceInput, check: checkPrice },
       { input: rightsInput, check: function () { return rightsInput.checked ? '' : 'You must confirm this to publish.'; } }
     ];
 
     rules.forEach(function (rule) {
+      if (rule.input === priceInput) return; // the price field has its own events above
+
       var eventName = (rule.input === categoryInput || rule.input === licenseInput || rule.input === rightsInput) ? 'change' : 'blur';
 
       rule.input.addEventListener(eventName, function () {
@@ -767,6 +851,9 @@
       if (reading) return;
       if (!validateAll()) return;
 
+      var paid = isPaid();
+      var price = paid ? parsePrice() : 0;
+
       UI.setLoading(submitBtn, true);
       $('upload-note').textContent = 'Uploading. Please keep this page open, large files can take a while.';
 
@@ -794,8 +881,8 @@
         category: categoryInput.value,
         license: licenseInput.value,
         tags: parseTags(tagsInput.value),
-        price_amount: 0,
-        currency: APP_CONFIG.region.defaultCurrency,
+        price_amount: price,
+        currency: 'NGN',
         file_path: path,
         file_name: file.name.slice(0, 200),
         file_size: file.size,
@@ -814,12 +901,23 @@
 
         UI.setLoading(submitBtn, false);
         $('upload-note').textContent = '';
-        showFormError(sbHelpers.friendlyError(result.error));
+
+        var raw = String(result.error.message || '').toLowerCase();
+        if (paid && (raw.indexOf('price_rules') !== -1 || raw.indexOf('free_only') !== -1)) {
+          showFormError('Paid datasets are not switched on in the database yet. Run the payments.sql file in the Supabase SQL Editor, then try again.');
+        } else {
+          showFormError(sbHelpers.friendlyError(result.error));
+        }
         return;
       }
 
       finished = true;
       UI.setLoading(submitBtn, false);
+
+      $('done-text').textContent = paid
+        ? 'Your file is saved in private storage and your listing is live at ' + APP_CONFIG.formatMoney(price, 'NGN') + '. Buyers can pay and download it straight away.'
+        : 'Your file is saved in private storage and your listing is live.';
+
       $('view-link').href = '/pages/data/dataset.html?id=' + encodeURIComponent(result.data.id);
       showView('done');
       window.scrollTo({ top: 0, behavior: 'smooth' });
