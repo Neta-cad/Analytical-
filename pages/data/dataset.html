@@ -138,7 +138,7 @@
       margin-top: var(--sp-4);
     }
 
-    /* On a phone the download card comes first. On a wide screen it sits on the right. */
+    /* On a phone the buy/download card comes first. On a wide screen it sits on the right. */
     @media (min-width: 960px) {
       .with-sidebar.sidebar-right > .stack { grid-column: 1; grid-row: 1; }
       .with-sidebar.sidebar-right > .sidebar { grid-column: 2; grid-row: 1; }
@@ -211,7 +211,10 @@
                   </div>
                   <div class="card-body">
                     <p class="text-sm">This is your dataset.</p>
-                    <button class="btn btn-danger btn-sm mt-3" type="button" id="delete-btn">Delete dataset</button>
+                    <div style="display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3);">
+                      <a class="btn btn-secondary btn-sm" href="/pages/data/my.html">My datasets</a>
+                      <button class="btn btn-danger btn-sm" type="button" id="delete-btn">Delete dataset</button>
+                    </div>
                   </div>
                 </div>
 
@@ -303,6 +306,8 @@
 
     var dataset = null;
     var viewer = null;
+    var owned = false;      // the logged-in member has bought this dataset
+    var mode = 'download';  // what the main button does: 'download' or 'buy'
 
     function showView(name) {
       $('loading-view').classList.toggle('hidden', name !== 'loading');
@@ -315,6 +320,19 @@
       if (n < 1024) return n + ' B';
       if (n < 1048576) return (n / 1024).toFixed(0) + ' KB';
       return (n / 1048576).toFixed(1) + ' MB';
+    }
+
+    function isPaid() {
+      return Number(dataset.price_amount) > 0;
+    }
+
+    function isOwner() {
+      return !!(viewer && dataset && viewer.id === dataset.owner_id);
+    }
+
+    function loginUrl() {
+      var here = window.location.pathname + window.location.search;
+      return APP_CONFIG.routes.login + '?next=' + encodeURIComponent(here);
     }
 
     function addBadge(text, className) {
@@ -425,19 +443,39 @@
       }
     }
 
-    /* ---------- Download button state ---------- */
-    function setupDownloadButton() {
+    /* ---------- Price card and main button ---------- */
+    function renderPrice() {
+      if (isPaid()) {
+        $('d-price').textContent = APP_CONFIG.formatMoney(dataset.price_amount, dataset.currency);
+        $('d-price-note').textContent = owned ? 'You own this dataset.' : 'One-time purchase.';
+      } else {
+        $('d-price').textContent = 'Free';
+        $('d-price-note').textContent = 'Free to download for members.';
+      }
+    }
+
+    function setupMainButton() {
       var btn = $('download-btn');
       var note = $('download-note');
-      var isOwner = !!(viewer && viewer.id === dataset.owner_id);
-      var paid = Number(dataset.price_amount) > 0;
+      btn.disabled = false;
 
-      if (paid && !isOwner) {
-        btn.textContent = 'Purchases open soon';
-        btn.disabled = true;
-        note.textContent = 'Paid downloads are not available yet.';
+      renderPrice();
+
+      // Paid, and not the owner, and not bought yet: the button buys
+      if (isPaid() && !isOwner() && !owned) {
+        mode = 'buy';
+
+        if (!viewer) {
+          btn.textContent = 'Log in to buy';
+          note.textContent = 'Creating an account is free.';
+        } else {
+          btn.textContent = 'Buy for ' + APP_CONFIG.formatMoney(dataset.price_amount, dataset.currency);
+          note.textContent = 'Secure payment by Paystack. After you pay, the file is yours to download any time.';
+        }
         return;
       }
+
+      mode = 'download';
 
       if (!viewer) {
         btn.textContent = 'Log in to download';
@@ -449,13 +487,71 @@
       note.textContent = 'The link works for one minute and then expires.';
     }
 
+    /* ---------- Buy ---------- */
+    async function startPurchase() {
+      var btn = $('download-btn');
+
+      var session = await sbHelpers.getSession();
+      if (!session) {
+        window.location.href = loginUrl();
+        return;
+      }
+
+      UI.setLoading(btn, true);
+
+      var response = null;
+      var data = null;
+
+      try {
+        response = await fetch('/api/paystack-initialize', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + session.access_token
+          },
+          body: JSON.stringify({ datasetId: dataset.id })
+        });
+
+        try { data = await response.json(); } catch (e) { data = null; }
+      } catch (e) {
+        UI.setLoading(btn, false);
+        UI.toast.error('Network problem. Check your connection and try again.');
+        return;
+      }
+
+      if (response.status === 409) {
+        // The server says this member already owns it
+        owned = true;
+        UI.setLoading(btn, false);
+        setupMainButton();
+        UI.toast.info('You already own this dataset.');
+        return;
+      }
+
+      var link = data && data.authorization_url;
+      var safeLink = '';
+
+      try {
+        var parsed = new URL(link);
+        if (parsed.protocol === 'https:' && /(^|\.)paystack\.com$/.test(parsed.hostname)) safeLink = parsed.href;
+      } catch (e) { safeLink = ''; }
+
+      if (!response.ok || !safeLink) {
+        UI.setLoading(btn, false);
+        UI.toast.error((data && data.error) || 'Could not start the payment. Please try again.');
+        return;
+      }
+
+      // Off to the Paystack payment page. The button stays busy until the page changes.
+      window.location.href = safeLink;
+    }
+
     /* ---------- Download ---------- */
     async function startDownload() {
       var btn = $('download-btn');
 
       if (!viewer) {
-        var here = window.location.pathname + window.location.search;
-        window.location.href = APP_CONFIG.routes.login + '?next=' + encodeURIComponent(here);
+        window.location.href = loginUrl();
         return;
       }
 
@@ -494,6 +590,18 @@
       UI.toast.success('Your download has started.');
     }
 
+    function onMainButton() {
+      if (mode === 'buy') {
+        if (!viewer) {
+          window.location.href = loginUrl();
+          return;
+        }
+        startPurchase();
+        return;
+      }
+      startDownload();
+    }
+
     /* ---------- Details list ---------- */
     function renderDetails() {
       $('d-details').innerHTML = '';
@@ -523,7 +631,13 @@
 
       if (result.error || !result.data || !result.data.length) {
         UI.setLoading(btn, false);
-        UI.toast.error(result.error ? sbHelpers.friendlyError(result.error) : 'Could not delete this dataset.');
+
+        var raw = result.error ? String(result.error.message || '').toLowerCase() : '';
+        if (raw.indexOf('foreign key') !== -1 || raw.indexOf('violates') !== -1) {
+          UI.toast.error('This dataset has been bought, so it cannot be deleted. Unpublish it instead from My datasets.', 8000);
+        } else {
+          UI.toast.error(result.error ? sbHelpers.friendlyError(result.error) : 'Could not delete this dataset.');
+        }
         return;
       }
 
@@ -536,16 +650,16 @@
     /* ---------- Fill the page ---------- */
     function render() {
       var d = dataset;
-      var isOwner = !!(viewer && viewer.id === d.owner_id);
 
       document.title = d.title + ' | ' + APP_CONFIG.brand.name;
       $('d-title').textContent = d.title;
 
       $('d-badges').innerHTML = '';
       addBadge(CATEGORIES[d.category] || 'Other', 'badge badge-brand');
-      addBadge(Number(d.price_amount) > 0 ? 'Paid' : 'Free', 'badge');
+      addBadge(isPaid() ? 'Paid' : 'Free', 'badge');
       addBadge(String(d.file_type || '').toUpperCase(), 'badge');
-      if (d.status !== 'published') addBadge(d.status === 'draft' ? 'Draft' : 'Removed', 'badge badge-warning');
+      if (owned) addBadge('You own this', 'badge badge-success');
+      if (d.status !== 'published') addBadge(d.status === 'draft' ? 'Unpublished' : 'Removed', 'badge badge-warning');
 
       renderOwner(d.owner);
 
@@ -565,16 +679,22 @@
         tagWrap.classList.remove('hidden');
       }
 
-      if (Number(d.price_amount) > 0) {
-        $('d-price').textContent = APP_CONFIG.formatMoney(d.price_amount, d.currency);
-        $('d-price-note').textContent = 'One-time purchase.';
-      }
-
       renderDetails();
       renderPreview(d);
-      setupDownloadButton();
+      setupMainButton();
 
-      $('owner-card').classList.toggle('hidden', !isOwner);
+      $('owner-card').classList.toggle('hidden', !isOwner());
+    }
+
+    /* ---------- Has this member bought it? ---------- */
+    async function checkOwned() {
+      owned = false;
+      if (!viewer || !isPaid() || isOwner()) return;
+
+      var result = await sb.rpc('has_purchased', { p_dataset_id: dataset.id });
+      owned = !result.error && result.data === true;
+
+      if (result.error) console.error('[Analytical] Could not check purchase:', result.error);
     }
 
     /* ---------- Start ---------- */
@@ -607,12 +727,21 @@
       }
 
       dataset = result.data;
+      await checkOwned();
       render();
       showView('dataset');
     }
 
-    $('download-btn').addEventListener('click', startDownload);
+    $('download-btn').addEventListener('click', onMainButton);
     $('delete-btn').addEventListener('click', deleteDataset);
+
+    // Coming back with the browser's back button from the payment page
+    window.addEventListener('pageshow', function (e) {
+      if (e.persisted && dataset) {
+        UI.setLoading($('download-btn'), false);
+        setupMainButton();
+      }
+    });
 
     start();
   })();

@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Payment | Analytical</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .result-panel {
+      text-align: center;
+    }
+
+    .result-icon {
+      width: 52px;
+      height: 52px;
+      margin: 0 auto var(--sp-4);
+      border-radius: var(--radius-full);
+      display: grid;
+      place-items: center;
+      background: rgba(212, 175, 55, 0.14);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      color: var(--brand-400);
+    }
+
+    .result-icon.is-success {
+      background: var(--success-bg);
+      border-color: rgba(63, 178, 127, 0.35);
+      color: var(--success);
+    }
+
+    .result-icon.is-danger {
+      background: var(--danger-bg);
+      border-color: rgba(229, 88, 79, 0.35);
+      color: var(--danger);
+    }
+
+    [data-theme="light"] .result-icon:not(.is-success):not(.is-danger) {
+      background: var(--brand-50);
+      border-color: var(--brand-200);
+      color: var(--brand-800);
+    }
+
+    .ref-box {
+      margin-top: var(--sp-4);
+      padding: var(--sp-3);
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .ref-box .label {
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .ref-box code {
+      display: block;
+      margin-top: 2px;
+      word-break: break-all;
+      font-size: var(--fs-xs);
+      border: 0;
+      background: none;
+      padding: 0;
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+    <div class="auth-card-wrap" style="min-height: calc(100vh - var(--nav-height));">
+      <div class="card auth-card">
+        <div class="card-body">
+
+          <!-- Confirming -->
+          <div class="result-panel" id="view-loading">
+            <div class="spinner spinner-lg" role="status" aria-label="Confirming your payment" style="margin: 0 auto var(--sp-4);"></div>
+            <h1 style="font-size: var(--fs-xl);">Confirming your payment</h1>
+            <p class="mt-2 text-sm" id="loading-text">Please wait a moment. Do not close this page.</p>
+          </div>
+
+          <!-- Paid -->
+          <div class="result-panel hidden" id="view-paid">
+            <div class="result-icon is-success">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5L20 7"></path></svg>
+            </div>
+            <h1 style="font-size: var(--fs-xl);">Payment confirmed</h1>
+            <p class="mt-2 text-sm">Thank you. Your dataset is ready to download.</p>
+            <p class="mt-2 fw-600" id="paid-title"></p>
+            <div class="mt-6" style="display: grid; gap: var(--sp-2);">
+              <a class="btn btn-primary btn-block" id="paid-link" href="/pages/data/datasets.html">Go to your dataset</a>
+              <a class="btn btn-secondary btn-block" href="/pages/data/datasets.html">Browse more datasets</a>
+            </div>
+          </div>
+
+          <!-- Still waiting -->
+          <div class="result-panel hidden" id="view-pending">
+            <div class="result-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+            </div>
+            <h1 style="font-size: var(--fs-xl);">Payment not confirmed yet</h1>
+            <p class="mt-2 text-sm">If you finished paying, it can take a few minutes to arrive. If you closed the payment page without paying, nothing was charged.</p>
+            <div class="mt-6" style="display: grid; gap: var(--sp-2);">
+              <button class="btn btn-primary btn-block" type="button" id="check-again">Check again</button>
+              <a class="btn btn-secondary btn-block" id="pending-back" href="/pages/data/datasets.html">Back to the dataset</a>
+            </div>
+          </div>
+
+          <!-- Problem: failed, duplicate, mismatch, not found, error -->
+          <div class="result-panel hidden" id="view-problem">
+            <div class="result-icon is-danger">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg>
+            </div>
+            <h1 style="font-size: var(--fs-xl);" id="problem-title">Something went wrong</h1>
+            <p class="mt-2 text-sm" id="problem-text"></p>
+
+            <div class="ref-box hidden" id="ref-box">
+              <div class="label">Payment reference (quote this if you contact support)</div>
+              <code id="ref-code"></code>
+            </div>
+
+            <div class="mt-6" style="display: grid; gap: var(--sp-2);">
+              <button class="btn btn-primary btn-block hidden" type="button" id="problem-retry">Try again</button>
+              <a class="btn btn-secondary btn-block hidden" id="problem-support" href="#">Email support</a>
+              <a class="btn btn-ghost btn-block" id="problem-back" href="/pages/data/datasets.html">Back to datasets</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- Payment result behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Auth || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var REFERENCE = /^ANL-[0-9a-f]{24}$/;
+    var AUTO_TRIES = 4;       // automatic checks while the payment is still pending
+    var WAIT_MS = 3000;
+
+    var VIEWS = ['loading', 'paid', 'pending', 'problem'];
+
+    var reference = '';
+    var datasetId = '';
+    var busy = false;
+
+    function showView(name) {
+      VIEWS.forEach(function (v) {
+        $('view-' + v).classList.toggle('hidden', v !== name);
+      });
+    }
+
+    function wait(ms) {
+      return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+
+    function datasetLink() {
+      return datasetId ? '/pages/data/dataset.html?id=' + encodeURIComponent(datasetId) : '/pages/data/datasets.html';
+    }
+
+    /* ---------- Support link ---------- */
+    function supportHref() {
+      var email = String(APP_CONFIG.brand.supportEmail || '').trim();
+      var valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) && email.indexOf('REPLACE_') === -1;
+      if (!valid) return '';
+
+      return 'mailto:' + email +
+        '?subject=' + encodeURIComponent(APP_CONFIG.brand.name + ' payment help') +
+        '&body=' + encodeURIComponent('Hello,\n\nMy payment reference: ' + reference + '\n\nWhat happened:\n');
+    }
+
+    /* ---------- Problem screen ---------- */
+    function showProblem(title, text, options) {
+      var opts = options || {};
+
+      $('problem-title').textContent = title;
+      $('problem-text').textContent = text;
+
+      $('ref-box').classList.toggle('hidden', !(opts.showRef && reference));
+      $('ref-code').textContent = reference;
+
+      $('problem-retry').classList.toggle('hidden', !opts.retry);
+
+      var href = opts.support ? supportHref() : '';
+      var support = $('problem-support');
+      support.classList.toggle('hidden', !href);
+      if (href) support.href = href;
+
+      $('problem-back').href = datasetLink();
+
+      showView('problem');
+    }
+
+    /* ---------- Ask the server to check the payment ---------- */
+    async function checkOnce() {
+      var session = await sbHelpers.getSession();
+      if (!session) return { state: 'login' };
+
+      try {
+        var response = await fetch('/api/paystack-verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ' + session.access_token
+          },
+          body: JSON.stringify({ reference: reference })
+        });
+
+        var data = null;
+        try { data = await response.json(); } catch (e) { data = null; }
+
+        if (data && data.datasetId) datasetId = data.datasetId;
+
+        if (response.ok && data && data.state) return { state: data.state };
+
+        if (response.status === 404) return { state: 'not_found' };
+        if (response.status === 403) return { state: 'forbidden' };
+
+        return { state: 'error', message: data && data.error };
+      } catch (e) {
+        return { state: 'error' };
+      }
+    }
+
+    /* ---------- Show the right screen for the result ---------- */
+    async function showPaid() {
+      $('paid-link').href = datasetLink();
+
+      // Show the dataset name if we can read it
+      if (datasetId) {
+        var result = await sb.from('datasets').select('title').eq('id', datasetId).maybeSingle();
+        if (result.data && result.data.title) $('paid-title').textContent = result.data.title;
+      }
+
+      showView('paid');
+    }
+
+    function handle(state, message) {
+      switch (state) {
+        case 'paid':
+          showPaid();
+          return;
+
+        case 'pending':
+          $('pending-back').href = datasetLink();
+          showView('pending');
+          return;
+
+        case 'failed':
+          showProblem(
+            'Payment did not go through',
+            'Paystack reported that this payment was not successful. If money left your account, contact support with the reference below.',
+            { showRef: true, support: true }
+          );
+          return;
+
+        case 'duplicate':
+          showProblem(
+            'You already own this dataset',
+            'This second payment has been flagged so it can be refunded. Please contact support with the reference below.',
+            { showRef: true, support: true }
+          );
+          return;
+
+        case 'mismatch':
+          showProblem(
+            'We could not match this payment',
+            'The amount or currency did not match the order, so the dataset was not unlocked. Please contact support with the reference below.',
+            { showRef: true, support: true }
+          );
+          return;
+
+        case 'not_found':
+          showProblem(
+            'We could not find that payment',
+            'The payment link may be wrong or incomplete. If you were charged, contact support with your payment details.',
+            { showRef: true, support: true }
+          );
+          return;
+
+        case 'forbidden':
+          showProblem(
+            'This payment belongs to another account',
+            'Log in with the account that made the purchase to see it.',
+            { showRef: false }
+          );
+          return;
+
+        default:
+          showProblem(
+            'We could not confirm your payment',
+            message || 'Something went wrong while checking. Your payment is safe. Try again in a moment.',
+            { retry: true, showRef: true, support: true }
+          );
+      }
+    }
+
+    /* ---------- Run the check, waiting a little if it is still pending ---------- */
+    async function run() {
+      if (busy) return;
+      busy = true;
+
+      showView('loading');
+
+      var result = { state: 'pending' };
+
+      for (var i = 0; i < AUTO_TRIES; i++) {
+        $('loading-text').textContent = i === 0
+          ? 'Please wait a moment. Do not close this page.'
+          : 'Still waiting for confirmation...';
+
+        result = await checkOnce();
+
+        if (result.state === 'login') {
+          window.location.replace(APP_CONFIG.routes.login + '?next=' + encodeURIComponent(window.location.pathname + window.location.search));
+          return;
+        }
+
+        if (result.state !== 'pending') break;
+        if (i < AUTO_TRIES - 1) await wait(WAIT_MS);
+      }
+
+      busy = false;
+      handle(result.state, result.message);
+    }
+
+    $('check-again').addEventListener('click', run);
+    $('problem-retry').addEventListener('click', run);
+
+    /* ---------- Start ---------- */
+    async function start() {
+      var context = await Auth.requireAuth();
+      if (!context) return; // not logged in: sent to the login page and back here
+
+      reference = String(Utils.getParam('reference') || Utils.getParam('trxref') || '').trim();
+
+      if (!REFERENCE.test(reference)) {
+        reference = '';
+        showProblem(
+          'No payment to check',
+          'This page opens after you pay for a dataset. Browse datasets to find something to buy.',
+          { showRef: false }
+        );
+        return;
+      }
+
+      run();
+    }
+
+    start();
+  })();
+</script>
+</body>
+</html>
