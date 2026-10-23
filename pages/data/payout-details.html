@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Payout details | Analytical</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .wrap {
+      max-width: 720px;
+    }
+
+    .earn-grid {
+      display: grid;
+      gap: var(--sp-4);
+      grid-template-columns: 1fr 1fr;
+    }
+
+    @media (min-width: 768px) {
+      .earn-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    .earn-value {
+      font-family: var(--font-display);
+      font-size: var(--fs-xl);
+      font-weight: 600;
+      color: var(--brand-400);
+      line-height: 1.15;
+      word-break: break-word;
+    }
+
+    [data-theme="light"] .earn-value {
+      color: var(--brand-800);
+    }
+
+    .earn-label {
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .history-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: var(--sp-2) var(--sp-4);
+      padding: var(--sp-3) 0;
+      border-bottom: 1px solid var(--border);
+      font-size: var(--fs-sm);
+    }
+
+    .history-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .history-row:first-child {
+      padding-top: 0;
+    }
+
+    .history-amount {
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .history-meta {
+      color: var(--text-muted);
+      font-size: var(--fs-xs);
+      word-break: break-word;
+    }
+
+    .save-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-3);
+      align-items: center;
+    }
+
+    .stack > * + * {
+      margin-top: var(--sp-4);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <section class="page-header">
+      <div class="container">
+        <h1>Payout details</h1>
+        <p>Tell us where to send your earnings, and see what you have been paid.</p>
+      </div>
+    </section>
+
+    <section style="padding-block: var(--sp-6);">
+      <div class="container">
+
+        <!-- Loading -->
+        <div class="loading-block" id="loading-view" style="min-height: 40vh;">
+          <div class="spinner spinner-lg" role="status" aria-label="Loading"></div>
+        </div>
+
+        <!-- Database not set up, or a load problem -->
+        <div class="hidden" id="problem-view">
+          <div class="empty-state">
+            <h3 id="problem-title">Could not load this page</h3>
+            <p id="problem-text"></p>
+            <button class="btn btn-primary" type="button" onclick="window.location.reload()">Refresh</button>
+          </div>
+        </div>
+
+        <!-- The page -->
+        <div class="wrap stack hidden" id="main-view">
+
+          <!-- Real earnings: hidden until there is a sale -->
+          <div id="earnings"></div>
+
+          <!-- Bank details -->
+          <div class="card">
+            <div class="card-head">
+              <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Bank account</h2>
+              <span class="badge hidden" id="saved-badge">Saved</span>
+            </div>
+            <div class="card-body">
+
+              <div class="alert alert-danger hidden" id="form-error" role="alert" style="margin-bottom: var(--sp-4);"></div>
+
+              <p class="text-sm" style="margin-bottom: var(--sp-4);">
+                Payouts are sent in naira to a Nigerian bank account. Only you and
+                <span data-brand-name>Analytical</span> staff can see these details.
+              </p>
+
+              <form id="payout-form" novalidate>
+
+                <div class="form-group">
+                  <label class="form-label" for="bank-name">Bank <span class="req">*</span></label>
+                  <input class="input" id="bank-name" type="text" maxlength="80" list="bank-list" autocomplete="off"
+                         placeholder="Start typing your bank name">
+                  <datalist id="bank-list">
+                    <option value="Access Bank"></option>
+                    <option value="Citibank Nigeria"></option>
+                    <option value="Ecobank Nigeria"></option>
+                    <option value="Fidelity Bank"></option>
+                    <option value="First Bank of Nigeria"></option>
+                    <option value="First City Monument Bank (FCMB)"></option>
+                    <option value="Globus Bank"></option>
+                    <option value="Guaranty Trust Bank (GTBank)"></option>
+                    <option value="Keystone Bank"></option>
+                    <option value="Kuda Bank"></option>
+                    <option value="Moniepoint"></option>
+                    <option value="OPay"></option>
+                    <option value="PalmPay"></option>
+                    <option value="Polaris Bank"></option>
+                    <option value="Providus Bank"></option>
+                    <option value="Stanbic IBTC Bank"></option>
+                    <option value="Standard Chartered Bank"></option>
+                    <option value="Sterling Bank"></option>
+                    <option value="Union Bank"></option>
+                    <option value="United Bank for Africa (UBA)"></option>
+                    <option value="Unity Bank"></option>
+                    <option value="Wema Bank"></option>
+                    <option value="Zenith Bank"></option>
+                  </datalist>
+                  <p class="form-error hidden" id="bank-name-error"></p>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="account-number">Account number <span class="req">*</span></label>
+                  <input class="input" id="account-number" type="text" inputmode="numeric" maxlength="10"
+                         autocomplete="off" placeholder="10 digits">
+                  <p class="form-error hidden" id="account-number-error"></p>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="account-name">Account name <span class="req">*</span></label>
+                  <input class="input" id="account-name" type="text" maxlength="100" autocomplete="off"
+                         placeholder="Exactly as it appears on the account">
+                  <p class="form-hint">A wrong name or number can send your money to the wrong person, so check both carefully.</p>
+                  <p class="form-error hidden" id="account-name-error"></p>
+                </div>
+
+                <div class="save-bar">
+                  <button class="btn btn-primary" type="submit" id="save-btn">Save bank details</button>
+                  <button class="btn btn-ghost hidden" type="button" id="remove-btn">Remove details</button>
+                </div>
+
+              </form>
+            </div>
+          </div>
+
+          <!-- Payout history -->
+          <div class="card hidden" id="history-card">
+            <div class="card-head">
+              <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Payments sent to you</h2>
+            </div>
+            <div class="card-body">
+              <div id="history-list"></div>
+            </div>
+          </div>
+
+          <p class="text-xs text-muted">
+            See how we handle this information in the <a href="/pages/privacy.html">Privacy Policy</a>.
+          </p>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- Payout details behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Auth || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var user = null;
+    var account = null;     // the saved bank details, if any
+    var dirty = false;
+
+    var form = $('payout-form');
+    var saveBtn = $('save-btn');
+    var removeBtn = $('remove-btn');
+    var formError = $('form-error');
+
+    var bankInput = $('bank-name');
+    var numberInput = $('account-number');
+    var nameInput = $('account-name');
+
+    /* ---------- Small helpers ---------- */
+    function showView(name) {
+      $('loading-view').classList.toggle('hidden', name !== 'loading');
+      $('problem-view').classList.toggle('hidden', name !== 'problem');
+      $('main-view').classList.toggle('hidden', name !== 'main');
+    }
+
+    function isMissingTable(error) {
+      var text = String((error && error.message) || '').toLowerCase();
+      return !!error && (
+        error.code === '42P01' ||
+        error.code === 'PGRST205' ||
+        text.indexOf('does not exist') !== -1 ||
+        text.indexOf('could not find the table') !== -1
+      );
+    }
+
+    function showFormError(message) {
+      formError.textContent = message;
+      formError.classList.remove('hidden');
+      formError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    /* ---------- Validation ---------- */
+    var rules = [
+      {
+        input: bankInput,
+        check: function () {
+          var v = bankInput.value.trim();
+          if (v.length < 2) return 'Enter your bank name.';
+          if (v.length > 80) return 'The bank name must be 80 characters or fewer.';
+          return '';
+        }
+      },
+      {
+        input: numberInput,
+        check: function () {
+          return /^[0-9]{10}$/.test(numberInput.value.trim()) ? '' : 'The account number must be exactly 10 digits.';
+        }
+      },
+      {
+        input: nameInput,
+        check: function () {
+          var v = nameInput.value.trim();
+          if (v.length < 2) return 'Enter the account name.';
+          if (v.length > 100) return 'The account name must be 100 characters or fewer.';
+          return '';
+        }
+      }
+    ];
+
+    numberInput.addEventListener('input', function () {
+      numberInput.value = numberInput.value.replace(/\D/g, '').slice(0, 10);
+    });
+
+    rules.forEach(function (rule) {
+      rule.input.addEventListener('blur', function () {
+        Utils.showFieldError(rule.input, rule.check());
+      });
+
+      rule.input.addEventListener('input', function () {
+        dirty = true;
+        if (rule.input.classList.contains('is-invalid')) {
+          Utils.showFieldError(rule.input, rule.check());
+        }
+      });
+    });
+
+    function validateAll() {
+      var firstBad = null;
+
+      rules.forEach(function (rule) {
+        var message = rule.check();
+        Utils.showFieldError(rule.input, message);
+        if (message && !firstBad) firstBad = rule.input;
+      });
+
+      if (firstBad) firstBad.focus();
+      return !firstBad;
+    }
+
+    window.addEventListener('beforeunload', function (e) {
+      if (!dirty) return;
+      e.preventDefault();
+      e.returnValue = '';
+    });
+
+    /* ---------- Fill the form ---------- */
+    function fill() {
+      bankInput.value = account ? account.bank_name : '';
+      numberInput.value = account ? account.account_number : '';
+      nameInput.value = account ? account.account_name : '';
+
+      $('saved-badge').classList.toggle('hidden', !account);
+      removeBtn.classList.toggle('hidden', !account);
+      saveBtn.textContent = account ? 'Update bank details' : 'Save bank details';
+
+      dirty = false;
+    }
+
+    /* ---------- Save ---------- */
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      formError.classList.add('hidden');
+
+      if (!validateAll()) return;
+
+      UI.setLoading(saveBtn, true);
+
+      var row = {
+        bank_name: bankInput.value.trim(),
+        account_number: numberInput.value.trim(),
+        account_name: nameInput.value.trim()
+      };
+
+      var result;
+
+      if (account) {
+        result = await sb.from('payout_accounts').update(row).eq('seller_id', user.id).select().single();
+      } else {
+        result = await sb.from('payout_accounts').insert(Object.assign({ seller_id: user.id }, row)).select().single();
+      }
+
+      UI.setLoading(saveBtn, false);
+
+      if (result.error) {
+        console.error('[Analytical] Could not save payout details:', result.error);
+        showFormError(sbHelpers.friendlyError(result.error));
+        return;
+      }
+
+      account = result.data;
+      fill();
+      UI.toast.success('Bank details saved.');
+    });
+
+    /* ---------- Remove ---------- */
+    removeBtn.addEventListener('click', async function () {
+      var ok = await UI.confirm({
+        title: 'Remove your bank details?',
+        message: 'We will not be able to pay you until you add them again.',
+        confirmText: 'Remove',
+        danger: true
+      });
+      if (!ok) return;
+
+      UI.setLoading(removeBtn, true);
+      var result = await sb.from('payout_accounts').delete().eq('seller_id', user.id).select('seller_id');
+      UI.setLoading(removeBtn, false);
+
+      if (result.error) {
+        UI.toast.error(sbHelpers.friendlyError(result.error));
+        return;
+      }
+
+      account = null;
+      fill();
+      UI.toast.success('Bank details removed.');
+    });
+
+    /* ---------- Earnings, from real recorded sales ---------- */
+    async function loadEarnings() {
+      var wrap = $('earnings');
+      wrap.innerHTML = '';
+
+      var result = await sb.rpc('my_earnings');
+      if (result.error) {
+        console.error('[Analytical] Could not load earnings:', result.error);
+        return;
+      }
+
+      var rows = (result.data || []).filter(function (r) {
+        return Number(r.sales_count) > 0 || Number(r.paid_out) > 0;
+      });
+
+      rows.forEach(function (r) {
+        var card = document.createElement('div');
+        card.className = 'card';
+
+        var head = document.createElement('div');
+        head.className = 'card-head';
+        var title = document.createElement('h2');
+        title.style.cssText = 'font-size: var(--fs-md); font-family: var(--font-sans);';
+        title.textContent = 'Your earnings in ' + r.cur;
+        head.appendChild(title);
+        card.appendChild(head);
+
+        var body = document.createElement('div');
+        body.className = 'card-body';
+
+        var grid = document.createElement('div');
+        grid.className = 'earn-grid';
+
+        [
+          ['Sales', Number(r.sales_count).toLocaleString()],
+          ['Your earnings', APP_CONFIG.formatMoney(r.net, r.cur)],
+          ['Paid out to you', APP_CONFIG.formatMoney(r.paid_out, r.cur)],
+          ['Waiting to be paid', APP_CONFIG.formatMoney(r.balance, r.cur)]
+        ].forEach(function (pair) {
+          var cell = document.createElement('div');
+          var value = document.createElement('div');
+          value.className = 'earn-value';
+          value.textContent = pair[1];
+          var label = document.createElement('div');
+          label.className = 'earn-label';
+          label.textContent = pair[0];
+          cell.appendChild(value);
+          cell.appendChild(label);
+          grid.appendChild(cell);
+        });
+
+        body.appendChild(grid);
+        card.appendChild(body);
+        wrap.appendChild(card);
+      });
+    }
+
+    /* ---------- Payout history ---------- */
+    async function loadHistory() {
+      var result = await sb
+        .from('payouts')
+        .select('id, amount, currency, reference, note, created_at')
+        .eq('seller_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (result.error) {
+        console.error('[Analytical] Could not load payouts:', result.error);
+        return;
+      }
+
+      var rows = result.data || [];
+      if (!rows.length) return;
+
+      var list = $('history-list');
+      list.innerHTML = '';
+
+      rows.forEach(function (p) {
+        var row = document.createElement('div');
+        row.className = 'history-row';
+
+        var left = document.createElement('div');
+        var amount = document.createElement('div');
+        amount.className = 'history-amount';
+        amount.textContent = APP_CONFIG.formatMoney(p.amount, p.currency);
+        left.appendChild(amount);
+
+        var bits = [];
+        if (p.reference) bits.push('Reference: ' + p.reference);
+        if (p.note) bits.push(p.note);
+        if (bits.length) {
+          var meta = document.createElement('div');
+          meta.className = 'history-meta';
+          meta.textContent = bits.join('  |  ');
+          left.appendChild(meta);
+        }
+
+        var date = document.createElement('div');
+        date.className = 'history-meta';
+        date.textContent = Utils.formatDate(p.created_at);
+
+        row.appendChild(left);
+        row.appendChild(date);
+        list.appendChild(row);
+      });
+
+      $('history-card').classList.remove('hidden');
+    }
+
+    /* ---------- Protect the page, then load ---------- */
+    async function start() {
+      var context = await Auth.requireAuth();
+      if (!context) return; // not logged in: sent to the login page
+
+      user = context.user;
+
+      var result = await sb.from('payout_accounts').select('*').eq('seller_id', user.id).maybeSingle();
+
+      if (result.error) {
+        console.error('[Analytical] Could not load payout details:', result.error);
+
+        $('problem-title').textContent = isMissingTable(result.error) ? 'Payouts are not set up yet' : 'Could not load this page';
+        $('problem-text').textContent = isMissingTable(result.error)
+          ? 'Run the payouts.sql file in the Supabase SQL Editor, then refresh this page.'
+          : sbHelpers.friendlyError(result.error);
+        showView('problem');
+        return;
+      }
+
+      account = result.data;
+      fill();
+      showView('main');
+
+      loadEarnings();
+      loadHistory();
+    }
+
+    start();
+  })();
+</script>
+</body>
+</html>

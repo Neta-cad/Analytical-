@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin payouts | Analytical</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0a0a0a">
+
+  <!-- Black is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .seller-body {
+      display: grid;
+      gap: var(--sp-3);
+      padding: var(--sp-4) var(--sp-5);
+    }
+
+    .seller-top {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: var(--sp-3);
+    }
+
+    .seller-name {
+      font-family: var(--font-sans);
+      font-size: var(--fs-md);
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .seller-email {
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+      word-break: break-all;
+    }
+
+    .seller-balance {
+      text-align: right;
+    }
+
+    .balance-value {
+      font-family: var(--font-display);
+      font-size: var(--fs-xl);
+      font-weight: 600;
+      color: var(--brand-400);
+      line-height: 1.1;
+    }
+
+    [data-theme="light"] .balance-value {
+      color: var(--brand-800);
+    }
+
+    .balance-label {
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .seller-figures {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-1) var(--sp-4);
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .bank-box {
+      padding: var(--sp-3);
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: var(--fs-sm);
+    }
+
+    .bank-box .label {
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .bank-line {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--sp-2);
+    }
+
+    .bank-number {
+      font-family: var(--font-mono);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .seller-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+      padding-top: var(--sp-3);
+      border-top: 1px solid var(--border);
+    }
+
+    .history-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: var(--sp-2) var(--sp-4);
+      padding: var(--sp-3) 0;
+      border-bottom: 1px solid var(--border);
+      font-size: var(--fs-sm);
+    }
+
+    .history-row:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .history-row:first-child {
+      padding-top: 0;
+    }
+
+    .history-amount {
+      font-weight: 700;
+    }
+
+    .history-meta {
+      color: var(--text-muted);
+      font-size: var(--fs-xs);
+      word-break: break-word;
+    }
+
+    .list-stack {
+      display: grid;
+      gap: var(--sp-3);
+    }
+
+    .stack > * + * {
+      margin-top: var(--sp-4);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <section class="page-header">
+      <div class="container">
+        <h1>Admin: payouts</h1>
+        <p>See what you owe each seller and record the payments you send.</p>
+      </div>
+    </section>
+
+    <section style="padding-block: var(--sp-6);">
+      <div class="container">
+
+        <!-- Loading -->
+        <div class="loading-block" id="loading-view" style="min-height: 40vh;">
+          <div class="spinner spinner-lg" role="status" aria-label="Loading"></div>
+        </div>
+
+        <!-- Problem -->
+        <div class="hidden" id="problem-view">
+          <div class="empty-state">
+            <h3 id="problem-title">Could not load this page</h3>
+            <p id="problem-text"></p>
+            <button class="btn btn-primary" type="button" onclick="window.location.reload()">Refresh</button>
+          </div>
+        </div>
+
+        <!-- The page -->
+        <div class="stack hidden" id="main-view">
+
+          <div class="alert alert-info">
+            Recording a payout only updates your books. It does not send money. Send the transfer from your bank or Paystack first, then record it here.
+          </div>
+
+          <div class="grid-3">
+            <div class="card"><div class="card-body stat-card">
+              <div class="stat-label">You owe sellers</div>
+              <div class="stat-value" id="stat-owed">0</div>
+              <div class="stat-note">Total unpaid balance</div>
+            </div></div>
+
+            <div class="card"><div class="card-body stat-card">
+              <div class="stat-label">Sellers waiting</div>
+              <div class="stat-value" id="stat-waiting">0</div>
+              <div class="stat-note">With a balance above zero</div>
+            </div></div>
+
+            <div class="card"><div class="card-body stat-card">
+              <div class="stat-label">Paid out so far</div>
+              <div class="stat-value" id="stat-paid">0</div>
+              <div class="stat-note">Across all sellers</div>
+            </div></div>
+          </div>
+
+          <div class="empty-state hidden" id="empty-view">
+            <h3>No sales yet</h3>
+            <p>When someone buys a paid dataset, the seller will appear here with what you owe them.</p>
+          </div>
+
+          <div class="list-stack" id="seller-list"></div>
+
+          <div class="card hidden" id="history-card">
+            <div class="card-head">
+              <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Recent payouts</h2>
+            </div>
+            <div class="card-body">
+              <div id="history-list"></div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Record payout window -->
+<div class="modal-backdrop" id="payout-modal" role="dialog" aria-modal="true" aria-labelledby="payout-heading" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="payout-heading" style="font-size: var(--fs-lg);">Record a payout</h2>
+      <button class="btn btn-ghost btn-sm" type="button" data-modal-close aria-label="Close">Close</button>
+    </div>
+
+    <form id="payout-form" novalidate>
+      <div class="modal-body">
+
+        <p class="text-sm" id="payout-summary" style="margin-bottom: var(--sp-4);"></p>
+
+        <div class="alert alert-danger hidden" id="payout-error" role="alert" style="margin-bottom: var(--sp-4);"></div>
+
+        <div class="form-group">
+          <label class="form-label" for="payout-amount">Amount paid, in naira <span class="req">*</span></label>
+          <input class="input" id="payout-amount" type="text" inputmode="decimal" autocomplete="off" placeholder="e.g. 2500">
+          <p class="form-hint" id="payout-max"></p>
+          <p class="form-error hidden" id="payout-amount-error"></p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="payout-reference">Transfer reference</label>
+          <input class="input" id="payout-reference" type="text" maxlength="120" autocomplete="off"
+                 placeholder="From your bank or Paystack (optional)">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="payout-note">Note</label>
+          <input class="input" id="payout-note" type="text" maxlength="200" autocomplete="off"
+                 placeholder="Optional, the seller can see this">
+        </div>
+
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-secondary" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" id="payout-save">Record payout</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- Admin payouts behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Auth || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var sellers = [];
+    var current = null;     // the seller whose payout is being recorded
+
+    var payoutForm = $('payout-form');
+    var payoutError = $('payout-error');
+    var payoutSave = $('payout-save');
+    var amountInput = $('payout-amount');
+    var referenceInput = $('payout-reference');
+    var noteInput = $('payout-note');
+
+    /* ---------- Small helpers ---------- */
+    function showView(name) {
+      $('loading-view').classList.toggle('hidden', name !== 'loading');
+      $('problem-view').classList.toggle('hidden', name !== 'problem');
+      $('main-view').classList.toggle('hidden', name !== 'main');
+    }
+
+    function showProblem(title, text) {
+      $('problem-title').textContent = title;
+      $('problem-text').textContent = text;
+      showView('problem');
+    }
+
+    function money(amount, cur) {
+      return APP_CONFIG.formatMoney(amount, cur || 'NGN');
+    }
+
+    function sellerKey(s) {
+      return s.seller_id + ':' + s.cur;
+    }
+
+    function findSeller(key) {
+      for (var i = 0; i < sellers.length; i++) {
+        if (sellerKey(sellers[i]) === key) return sellers[i];
+      }
+      return null;
+    }
+
+    function div(className, text) {
+      var el = document.createElement('div');
+      if (className) el.className = className;
+      if (text != null) el.textContent = text;
+      return el;
+    }
+
+    /* ---------- Totals ---------- */
+    function renderStats() {
+      var owed = 0;
+      var paid = 0;
+      var waiting = 0;
+
+      sellers.forEach(function (s) {
+        if (s.cur !== 'NGN') return;
+        paid += Number(s.paid_out) || 0;
+        var balance = Number(s.balance) || 0;
+        if (balance > 0) { owed += balance; waiting++; }
+      });
+
+      $('stat-owed').textContent = money(owed);
+      $('stat-waiting').textContent = String(waiting);
+      $('stat-paid').textContent = money(paid);
+    }
+
+    /* ---------- One seller ---------- */
+    function buildSeller(s) {
+      var card = div('card');
+      var body = div('seller-body');
+
+      var top = div('seller-top');
+
+      var who = div('');
+      var name = div('seller-name', s.full_name || s.username);
+      who.appendChild(name);
+
+      var handle = document.createElement('a');
+      handle.className = 'text-xs';
+      handle.href = '/pages/profile/view.html?u=' + encodeURIComponent(s.username);
+      handle.textContent = '@' + s.username;
+      who.appendChild(handle);
+
+      if (s.email) who.appendChild(div('seller-email', s.email));
+      top.appendChild(who);
+
+      var balance = div('seller-balance');
+      balance.appendChild(div('balance-value', money(s.balance, s.cur)));
+      balance.appendChild(div('balance-label', 'Balance owed'));
+      top.appendChild(balance);
+
+      body.appendChild(top);
+
+      var figures = div('seller-figures');
+      [
+        Number(s.sales_count).toLocaleString() + (Number(s.sales_count) === 1 ? ' sale' : ' sales'),
+        'Earned ' + money(s.net, s.cur),
+        'Paid out ' + money(s.paid_out, s.cur)
+      ].forEach(function (text) {
+        figures.appendChild(div('', text));
+      });
+      body.appendChild(figures);
+
+      /* Bank details */
+      var bank = div('bank-box');
+
+      if (s.account_number) {
+        bank.appendChild(div('label', 'Send the money to'));
+        bank.appendChild(div('', s.account_name + ' at ' + s.bank_name));
+
+        var line = div('bank-line');
+        var number = document.createElement('span');
+        number.className = 'bank-number';
+        number.textContent = s.account_number;
+        line.appendChild(number);
+
+        var copy = document.createElement('button');
+        copy.type = 'button';
+        copy.className = 'btn btn-ghost btn-sm';
+        copy.textContent = 'Copy number';
+        copy.setAttribute('data-action', 'copy');
+        copy.setAttribute('data-number', s.account_number);
+        line.appendChild(copy);
+
+        bank.appendChild(line);
+      } else {
+        bank.appendChild(div('', 'This seller has not added bank details yet.'));
+      }
+
+      body.appendChild(bank);
+
+      /* Action */
+      var actions = div('seller-actions');
+      var owed = Number(s.balance) || 0;
+
+      var pay = document.createElement('button');
+      pay.type = 'button';
+      pay.className = 'btn btn-primary btn-sm';
+      pay.textContent = 'Record payout';
+      pay.setAttribute('data-action', 'pay');
+      pay.setAttribute('data-key', sellerKey(s));
+
+      if (owed <= 0) {
+        pay.disabled = true;
+        pay.title = 'Nothing is owed to this seller.';
+      } else if (s.cur !== 'NGN') {
+        pay.disabled = true;
+        pay.title = 'Only naira payouts can be recorded.';
+      }
+
+      actions.appendChild(pay);
+      body.appendChild(actions);
+
+      card.appendChild(body);
+      return card;
+    }
+
+    function renderSellers() {
+      var list = $('seller-list');
+      list.innerHTML = '';
+      sellers.forEach(function (s) { list.appendChild(buildSeller(s)); });
+
+      $('empty-view').classList.toggle('hidden', sellers.length > 0);
+      renderStats();
+    }
+
+    /* ---------- Buttons on the seller cards ---------- */
+    $('seller-list').addEventListener('click', async function (e) {
+      var target = e.target;
+      if (!(target instanceof Element)) return;
+
+      var btn = target.closest('[data-action]');
+      if (!btn) return;
+
+      var action = btn.getAttribute('data-action');
+
+      if (action === 'copy') {
+        var ok = await Utils.copyText(btn.getAttribute('data-number'));
+        if (ok) UI.toast.success('Account number copied.');
+        else UI.toast.error('Could not copy. Please copy it from the page.');
+        return;
+      }
+
+      if (action === 'pay') {
+        var seller = findSeller(btn.getAttribute('data-key'));
+        if (seller) openPayout(seller);
+      }
+    });
+
+    /* ---------- Record payout window ---------- */
+    function parseAmount() {
+      var raw = String(amountInput.value || '').replace(/[,\s]/g, '');
+      if (!/^\d+(\.\d{1,2})?$/.test(raw)) return NaN;
+      return parseFloat(raw);
+    }
+
+    function checkAmount() {
+      var n = parseAmount();
+      if (isNaN(n)) return 'Enter an amount, for example 2500 or 2500.50.';
+      if (n <= 0) return 'The amount must be above zero.';
+      if (current && n > Number(current.balance) + 0.0001) {
+        return 'That is more than the balance of ' + money(current.balance, current.cur) + '.';
+      }
+      return '';
+    }
+
+    amountInput.addEventListener('input', function () {
+      amountInput.value = amountInput.value.replace(/[^\d.,]/g, '');
+      if (amountInput.classList.contains('is-invalid')) {
+        Utils.showFieldError(amountInput, checkAmount());
+      }
+    });
+
+    amountInput.addEventListener('blur', function () {
+      Utils.showFieldError(amountInput, checkAmount());
+    });
+
+    function openPayout(seller) {
+      current = seller;
+      payoutError.classList.add('hidden');
+
+      $('payout-summary').textContent =
+        'Paying ' + (seller.full_name || seller.username) + '. Record this only after the money has been sent.';
+      $('payout-max').textContent = 'Their balance is ' + money(seller.balance, seller.cur) + '.';
+
+      amountInput.value = String(Number(seller.balance));
+      referenceInput.value = '';
+      noteInput.value = '';
+      Utils.showFieldError(amountInput, '');
+
+      UI.openModal('payout-modal');
+    }
+
+    payoutForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      payoutError.classList.add('hidden');
+
+      if (!current) return;
+
+      var problem = checkAmount();
+      Utils.showFieldError(amountInput, problem);
+      if (problem) { amountInput.focus(); return; }
+
+      var amount = parseAmount();
+      var seller = current;
+
+      var ok = await UI.confirm({
+        title: 'Record this payout?',
+        message: 'You are recording ' + money(amount, seller.cur) + ' paid to ' + (seller.full_name || seller.username) +
+                 '. This cannot be undone here.',
+        confirmText: 'Record payout'
+      });
+      if (!ok) return;
+
+      UI.setLoading(payoutSave, true);
+
+      var result = await sb.rpc('record_payout', {
+        p_seller_id: seller.seller_id,
+        p_amount: amount,
+        p_currency: seller.cur,
+        p_reference: referenceInput.value.trim(),
+        p_note: noteInput.value.trim()
+      });
+
+      UI.setLoading(payoutSave, false);
+
+      if (result.error) {
+        console.error('[Analytical] Could not record payout:', result.error);
+
+        var raw = String(result.error.message || '').toLowerCase();
+        payoutError.textContent =
+          raw.indexOf('more than the seller') !== -1
+            ? 'That is more than the seller\'s balance. Refresh the page and try again.'
+            : sbHelpers.friendlyError(result.error);
+        payoutError.classList.remove('hidden');
+        return;
+      }
+
+      UI.closeModal('payout-modal');
+      current = null;
+      UI.toast.success('Payout recorded.');
+
+      await load();
+    });
+
+    /* ---------- Recent payouts ---------- */
+    async function loadHistory() {
+      var result = await sb
+        .from('payouts')
+        .select('id, amount, currency, reference, note, created_at, seller:profiles!seller_id(username, full_name)')
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      if (result.error) {
+        console.error('[Analytical] Could not load payouts:', result.error);
+        return;
+      }
+
+      var rows = result.data || [];
+      $('history-card').classList.toggle('hidden', !rows.length);
+      if (!rows.length) return;
+
+      var list = $('history-list');
+      list.innerHTML = '';
+
+      rows.forEach(function (p) {
+        var row = div('history-row');
+
+        var left = div('');
+        left.appendChild(div('history-amount', money(p.amount, p.currency)));
+
+        var who = p.seller ? (p.seller.full_name || p.seller.username) : 'A seller';
+        var bits = ['To ' + who];
+        if (p.reference) bits.push('Ref: ' + p.reference);
+        if (p.note) bits.push(p.note);
+        left.appendChild(div('history-meta', bits.join('  |  ')));
+
+        row.appendChild(left);
+        row.appendChild(div('history-meta', Utils.formatDate(p.created_at)));
+        list.appendChild(row);
+      });
+    }
+
+    /* ---------- Load the balances ---------- */
+    async function load() {
+      var result = await sb.rpc('admin_seller_balances');
+
+      if (result.error) {
+        console.error('[Analytical] Could not load balances:', result.error);
+
+        var raw = String(result.error.message || '').toLowerCase();
+
+        if (raw.indexOf('staff only') !== -1) {
+          showProblem('Staff only', 'Your account does not have access to this page.');
+        } else if (result.error.code === 'PGRST202' || raw.indexOf('could not find the function') !== -1) {
+          showProblem('Payouts are not set up yet', 'Run the payouts.sql file in the Supabase SQL Editor, then refresh this page.');
+        } else {
+          showProblem('Could not load balances', sbHelpers.friendlyError(result.error));
+        }
+        return;
+      }
+
+      sellers = result.data || [];
+      renderSellers();
+      showView('main');
+      loadHistory();
+    }
+
+    /* ---------- Admins only ---------- */
+    async function start() {
+      var context = await Auth.requireAuth({ role: 'admin' });
+      if (!context) return; // not logged in, or not an admin: sent away
+
+      load();
+    }
+
+    start();
+  })();
+</script>
+</body>
+</html>
