@@ -1,6 +1,7 @@
 /* ==========================================================
    layout.css — nav, footer, grids, page layouts
-   Theme: black and gold. Depends on base.css (load it first)
+   Theme: navy and amber gold. Depends on base.css (load it first)
+   Every color comes from the tokens in base.css.
    ========================================================== */
 
 /* ---------- Page shell ---------- */
@@ -35,7 +36,7 @@
   top: 0;
   z-index: var(--z-nav);
   height: var(--nav-height);
-  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
   -webkit-backdrop-filter: saturate(160%) blur(12px);
   backdrop-filter: saturate(160%) blur(12px);
   border-bottom: 1px solid var(--border);
@@ -104,7 +105,7 @@
 
 .nav-link.active {
   color: var(--brand-400);
-  background: rgba(212, 175, 55, 0.12);
+  background: rgba(var(--gold-rgb), 0.12);
 }
 
 .nav-actions {
@@ -411,25 +412,25 @@ body.nav-open {
   grid-template-columns: 1fr;
 }
 
-/* The side panel stays black in both themes */
+/* The side panel stays deep navy in both themes, with light text */
 .auth-side {
   display: none;
   background:
-    radial-gradient(620px 420px at 15% 0%, rgba(212, 175, 55, 0.2), transparent 62%),
-    #0a0a0a;
-  color: #f2eee3;
+    radial-gradient(620px 420px at 15% 0%, rgba(var(--gold-rgb), 0.18), transparent 62%),
+    var(--panel-deep);
+  color: #f4f7fb;
   padding: var(--sp-12);
   flex-direction: column;
   justify-content: center;
-  border-right: 1px solid #262219;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .auth-side h2 {
-  color: #f2eee3;
+  color: #f4f7fb;
 }
 
 .auth-side p {
-  color: #bfb8a7;
+  color: #a9b7cc;
 }
 
 .auth-card-wrap {

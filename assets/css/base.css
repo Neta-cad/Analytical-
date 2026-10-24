@@ -1,58 +1,61 @@
 /* ==========================================================
    base.css — design tokens, reset, typography, utilities
-   Theme: black and gold. Dark is the main theme.
+   Theme: navy and amber gold. Dark is the main theme.
    Mobile-first.
    ========================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-/* ---------- Design tokens (dark theme is the default) ---------- */
+/* ---------- Design tokens (dark navy theme is the default) ---------- */
 :root {
-  /* Gold scale: 50 lightest, 900 darkest */
-  --brand-50:  #fcf7e6;
-  --brand-100: #f7ecc6;
-  --brand-200: #f0dd9b;
-  --brand-300: #e9cc70;
-  --brand-400: #e2bf50;
-  --brand-500: #dbb53f;
-  --brand-600: #d4af37;   /* main gold: buttons and highlights */
-  --brand-700: #b8941f;
-  --brand-800: #8c6f14;
-  --brand-900: #5e4a0d;
+  /* Amber gold scale: 50 lightest, 900 darkest */
+  --brand-50:  #fff6e4;
+  --brand-100: #feebc9;
+  --brand-200: #fddda5;
+  --brand-300: #fbcc7a;
+  --brand-400: #f9be55;
+  --brand-500: #f7b037;
+  --brand-600: #f5a623;   /* main gold: buttons and highlights */
+  --brand-700: #d98e10;
+  --brand-800: #a86d0a;
+  --brand-900: #6e4707;
 
-  --accent:      #f3dd91; /* champagne */
-  --accent-dark: #c9a227;
-  --gold-gradient: linear-gradient(135deg, #f3dd91 0%, #d4af37 48%, #a8841c 100%);
+  --gold-rgb: 245, 166, 35;   /* the main gold as numbers, for see-through tints */
+
+  --accent:      #fbcc7a;
+  --accent-dark: #d98e10;
+  --gold-gradient: linear-gradient(135deg, #fbcc7a 0%, #f5a623 48%, #d98e10 100%);
 
   /* Status */
-  --success:    #3fb27f;
-  --success-bg: rgba(63, 178, 127, 0.16);
-  --warning:    #e0a526;
-  --warning-bg: rgba(224, 165, 38, 0.16);
+  --success:    #27ae60;
+  --success-bg: rgba(39, 174, 96, 0.16);
+  --warning:    #e8b339;
+  --warning-bg: rgba(232, 179, 57, 0.16);
   --danger:     #e5584f;
   --danger-bg:  rgba(229, 88, 79, 0.16);
   --info:       #5b9bd5;
   --info-bg:    rgba(91, 155, 213, 0.16);
 
-  /* Surfaces and text */
-  --bg:            #0a0a0a;
-  --bg-soft:       #101010;
-  --bg-muted:      #171717;
-  --surface:       #121212;
-  --surface-hover: #1a1a1a;
-  --border:        #262219;
-  --border-strong: #3b3424;
+  /* Surfaces and text (navy) */
+  --bg:            #0a1628;
+  --bg-soft:       #0d1f3c;
+  --bg-muted:      #132a4d;
+  --surface:       #102445;
+  --surface-hover: #15305a;
+  --panel-deep:    #060f1e;   /* darkest navy: closing bands, side panels */
+  --border:        #1b2d4a;
+  --border-strong: #2a4167;
 
-  --text:          #f2eee3;
-  --text-soft:     #bfb8a7;
-  --text-muted:    #8c8574;
-  --text-on-brand: #0a0a0a;
+  --text:          #f4f7fb;
+  --text-soft:     #a9b7cc;
+  --text-muted:    #7587a3;
+  --text-on-brand: #0a1628;
 
-  --link:       #e2bf50;
-  --link-hover: #f0d98a;
+  --link:       #f5b543;
+  --link-hover: #fbcc7a;
 
   /* Focus ring (gold) */
-  --focus-ring: rgba(212, 175, 55, 0.28);
+  --focus-ring: rgba(245, 166, 35, 0.3);
 
   /* Typography */
   --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
@@ -86,7 +89,7 @@
   --sp-16: 3.25rem;
   --sp-20: 4rem;
 
-  /* Radius (slightly sharper for a mature look) */
+  /* Radius */
   --radius-sm: 4px;
   --radius:    6px;
   --radius-lg: 10px;
@@ -94,9 +97,9 @@
   --radius-full: 999px;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --shadow:    0 6px 18px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 1px 2px rgba(2, 8, 20, 0.5);
+  --shadow:    0 6px 18px rgba(2, 8, 20, 0.45);
+  --shadow-lg: 0 16px 40px rgba(2, 8, 20, 0.6);
 
   /* Layout */
   --container: 1120px;
@@ -116,27 +119,28 @@
   color-scheme: dark;
 }
 
-/* ---------- Light theme (warm ivory and gold) ---------- */
+/* ---------- Light theme (cool white, navy text, amber accents) ---------- */
 [data-theme="light"] {
-  --bg:            #faf8f3;
-  --bg-soft:       #f3efe4;
-  --bg-muted:      #ece6d6;
+  --bg:            #f7f9fc;
+  --bg-soft:       #eef2f8;
+  --bg-muted:      #e2e9f3;
   --surface:       #ffffff;
-  --surface-hover: #f7f3e8;
-  --border:        #e4dcc6;
-  --border-strong: #cfc4a4;
+  --surface-hover: #f1f5fa;
+  --panel-deep:    #0a1628;
+  --border:        #d9e1ee;
+  --border-strong: #bcc9de;
 
-  --text:          #14110a;
-  --text-soft:     #4d4638;
-  --text-muted:    #7a7260;
+  --text:          #0a1628;
+  --text-soft:     #3e4d66;
+  --text-muted:    #6b7a93;
 
-  --link:       #8a6a14;
-  --link-hover: #6b5210;
+  --link:       #9a5f00;
+  --link-hover: #7a4a00;
 
-  --focus-ring: rgba(184, 148, 31, 0.28);
+  --focus-ring: rgba(217, 142, 16, 0.3);
 
-  --success:    #15803d;
-  --success-bg: #dcfce7;
+  --success:    #1e8449;
+  --success-bg: #dcf5e6;
   --warning:    #b45309;
   --warning-bg: #fef3c7;
   --danger:     #dc2626;
@@ -144,9 +148,9 @@
   --info:       #2563eb;
   --info-bg:    #dbeafe;
 
-  --shadow-sm: 0 1px 2px rgba(20, 17, 10, 0.08);
-  --shadow:    0 6px 18px rgba(20, 17, 10, 0.1);
-  --shadow-lg: 0 16px 40px rgba(20, 17, 10, 0.16);
+  --shadow-sm: 0 1px 2px rgba(10, 22, 40, 0.08);
+  --shadow:    0 6px 18px rgba(10, 22, 40, 0.1);
+  --shadow-lg: 0 16px 40px rgba(10, 22, 40, 0.16);
 
   color-scheme: light;
 }
@@ -320,6 +324,15 @@ pre code {
 /* The brand name in the nav and footer uses the display font */
 .nav-brand {
   font-family: var(--font-display);
+}
+
+/* ---------- Dark closing bands keep the deep navy look ----------
+   The closing call-to-action band is styled inside each page, so this
+   rule (with !important) keeps all of them on the new palette. */
+.cta-band {
+  background:
+    radial-gradient(520px 260px at 50% 0%, rgba(var(--gold-rgb), 0.18), transparent 65%),
+    var(--panel-deep) !important;
 }
 
 /* ---------- Accessibility ---------- */
