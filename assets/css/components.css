@@ -1,6 +1,7 @@
 /* ==========================================================
    components.css — reusable UI components
-   Theme: black and gold. Depends on base.css (load it first)
+   Theme: navy and amber gold. Depends on base.css (load it first)
+   Every color comes from the tokens in base.css.
    ========================================================== */
 
 /* ---------- Buttons ---------- */
@@ -59,7 +60,7 @@
 }
 
 .btn-outline:hover:not(:disabled) {
-  background: rgba(212, 175, 55, 0.12);
+  background: rgba(var(--gold-rgb), 0.12);
   border-color: var(--brand-600);
   color: var(--brand-300);
 }
@@ -80,7 +81,7 @@
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: #c9453d;
+  background: color-mix(in srgb, var(--danger) 85%, black);
   color: #fff;
 }
 
@@ -90,7 +91,7 @@
 }
 
 .btn-success:hover:not(:disabled) {
-  background: #2f9a6a;
+  background: color-mix(in srgb, var(--success) 85%, black);
   color: #fff;
 }
 
@@ -135,8 +136,8 @@
 }
 
 .btn-primary.is-loading::after {
-  border-color: rgba(10, 10, 10, 0.25);
-  border-top-color: #0a0a0a;
+  border-color: rgba(10, 22, 40, 0.25);
+  border-top-color: var(--text-on-brand);
 }
 
 .btn-secondary.is-loading::after,
@@ -324,7 +325,7 @@
   appearance: none;
   -webkit-appearance: none;
   padding-right: 2.3rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238c8574' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%237587a3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.8rem center;
 }
@@ -433,9 +434,9 @@
 }
 
 .badge-brand {
-  background: rgba(212, 175, 55, 0.14);
+  background: rgba(var(--gold-rgb), 0.14);
   color: var(--brand-400);
-  border-color: rgba(212, 175, 55, 0.3);
+  border-color: rgba(var(--gold-rgb), 0.3);
 }
 
 .badge-success { background: var(--success-bg); color: var(--success); border-color: transparent; }
@@ -457,7 +458,7 @@
 }
 
 a.tag:hover {
-  background: rgba(212, 175, 55, 0.14);
+  background: rgba(var(--gold-rgb), 0.14);
   color: var(--brand-400);
 }
 
@@ -544,7 +545,7 @@ a.tag:hover {
   position: fixed;
   inset: 0;
   z-index: var(--z-modal);
-  background: rgba(0, 0, 0, 0.72);
+  background: rgba(2, 8, 20, 0.75);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   display: none;
@@ -836,6 +837,36 @@ a.tag:hover {
 
 [data-theme="light"] .stars {
   color: var(--brand-700);
+}
+
+/* ---------- Palette compatibility ----------
+   A few pages still carry soft gold tints in their own style blocks, from
+   the earlier black-and-gold look. These rules bring them onto the palette. */
+.confirm-icon:not(.is-danger),
+.result-icon:not(.is-success):not(.is-danger),
+.module-icon {
+  background: rgba(var(--gold-rgb), 0.14) !important;
+  border-color: rgba(var(--gold-rgb), 0.3) !important;
+  color: var(--brand-400) !important;
+}
+
+[data-theme="light"] .confirm-icon:not(.is-danger),
+[data-theme="light"] .result-icon:not(.is-success):not(.is-danger),
+[data-theme="light"] .module-icon {
+  background: var(--brand-50) !important;
+  border-color: var(--brand-200) !important;
+  color: var(--brand-800) !important;
+}
+
+.profile-hero,
+.dataset-hero {
+  background:
+    radial-gradient(760px 300px at 20% -30%, rgba(var(--gold-rgb), 0.14), transparent 65%),
+    var(--bg-soft) !important;
+}
+
+.auth-side-list svg {
+  color: var(--brand-600) !important;
 }
 
 /* ---------- Animations ---------- */

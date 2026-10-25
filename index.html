@@ -4,10 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Analytical | Where the world's tech people build, learn and earn</title>
-  <meta name="description" content="Analytical is a global home for coders, data analysts, data scientists and tech creators to sell projects, find jobs, learn and solve problems together.">
-  <meta name="theme-color" content="#0a0a0a">
+  <meta name="description" content="Analytical is a global home for coders, data analysts, data scientists and tech creators to sell datasets and projects, find jobs, learn and solve problems together.">
+  <meta name="theme-color" content="#0a1628">
 
-  <!-- Black is the default theme. A saved choice is respected. -->
+  <!-- Navy is the default theme. A saved choice is respected. -->
   <script>
     (function () {
       var key = 'analytical-theme';
@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="/assets/css/components.css">
 
   <style>
-    /* Styles used only on the home page */
+    /* Styles used only on the home page. Colors come from base.css. */
 
     /* ----- Hero ----- */
     .hero {
@@ -37,7 +37,7 @@
       text-align: center;
       border-bottom: 1px solid var(--border);
       background:
-        radial-gradient(900px 380px at 50% -20%, rgba(212, 175, 55, 0.16), transparent 65%),
+        radial-gradient(900px 380px at 50% -20%, rgba(var(--gold-rgb), 0.16), transparent 65%),
         var(--bg);
     }
 
@@ -70,7 +70,7 @@
 
     .hero .lead {
       font-size: var(--fs-base);
-      max-width: 560px;
+      max-width: 580px;
       margin: var(--sp-4) auto 0;
     }
 
@@ -109,8 +109,8 @@
       border-radius: var(--radius);
       display: grid;
       place-items: center;
-      background: rgba(212, 175, 55, 0.12);
-      border: 1px solid rgba(212, 175, 55, 0.28);
+      background: rgba(var(--gold-rgb), 0.12);
+      border: 1px solid rgba(var(--gold-rgb), 0.28);
       color: var(--brand-400);
     }
 
@@ -164,21 +164,21 @@
       font-size: var(--fs-sm);
     }
 
-    /* ----- Closing call to action (stays black in both themes) ----- */
+    /* ----- Closing call to action (deep navy in both themes) ----- */
     .cta-band {
       border-radius: var(--radius-xl);
       padding: var(--sp-10) var(--sp-5);
       text-align: center;
       background:
-        radial-gradient(520px 260px at 50% 0%, rgba(212, 175, 55, 0.2), transparent 65%),
-        #0a0a0a;
+        radial-gradient(520px 260px at 50% 0%, rgba(var(--gold-rgb), 0.2), transparent 65%),
+        var(--panel-deep);
       border: 1px solid var(--brand-800);
     }
 
-    .cta-band h2 { color: #f2eee3; }
+    .cta-band h2 { color: #f4f7fb; }
 
     .cta-band p {
-      color: #bfb8a7;
+      color: #a9b7cc;
       max-width: 520px;
       margin: var(--sp-2) auto 0;
     }
@@ -189,12 +189,6 @@
     }
 
     /* ----- Light theme adjustments ----- */
-    [data-theme="light"] .hero {
-      background:
-        radial-gradient(900px 380px at 50% -20%, rgba(184, 148, 31, 0.14), transparent 65%),
-        var(--bg);
-    }
-
     [data-theme="light"] .hero h1 .grad {
       background: none;
       color: var(--brand-800);
@@ -228,8 +222,8 @@
           <div class="hero-rule"></div>
           <h1>Where the world's tech people <span class="grad">build, learn and earn.</span></h1>
           <p class="lead">
-            Coders, data analysts, data scientists and creators in one place. Share your work,
-            sell your projects, find jobs, learn new skills and solve problems together.
+            Coders, data analysts, data scientists and creators in one place. Share and sell
+            datasets today, with projects, jobs and learning opening in phases.
           </p>
 
           <div class="hero-actions" data-auth="out">
@@ -278,7 +272,7 @@
               <span class="badge" data-module-badge>Coming soon</span>
             </div>
             <h3>Marketplace</h3>
-            <p>Upload and sell projects, templates, datasets, notebooks and websites to people around the world.</p>
+            <p>Upload and sell projects, templates, notebooks and websites to people around the world.</p>
           </a>
 
           <a class="card module-card" data-module-card="jobs" data-href="/pages/jobs/browse.html" aria-disabled="true">
@@ -332,8 +326,8 @@
               </span>
               <span class="badge" data-module-badge>Coming soon</span>
             </div>
-            <h3>Data tools</h3>
-            <p>Explore datasets and use analysis tools built for analysts and data scientists.</p>
+            <h3>Datasets</h3>
+            <p>Browse, download and sell datasets shared by analysts and data scientists, free or paid.</p>
           </a>
 
         </div>
@@ -357,7 +351,7 @@
           </div>
           <div class="audience-item">
             <h3>Data analysts and scientists</h3>
-            <p>Share datasets, notebooks and dashboards, and connect with people who need data skills.</p>
+            <p>Share and sell datasets, publish notebooks and dashboards, and connect with people who need data skills.</p>
           </div>
           <div class="audience-item">
             <h3>Designers and creators</h3>
@@ -402,8 +396,8 @@
           </div>
           <div class="card step-card">
             <span class="step-num">03</span>
-            <h3>Grow with the community</h3>
-            <p>As each module opens, you will already have your account and reputation ready.</p>
+            <h3>Share or find data</h3>
+            <p>Upload a dataset, free or for a price, or download what others have shared.</p>
           </div>
         </div>
       </div>
