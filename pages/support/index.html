@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My support | Analytical</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0a1628">
+
+  <!-- Navy is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .head-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--sp-4);
+    }
+
+    .ticket-list {
+      display: grid;
+      gap: var(--sp-3);
+      max-width: 820px;
+    }
+
+    .ticket-link {
+      display: block;
+      color: inherit;
+      padding: var(--sp-4) var(--sp-5);
+    }
+
+    .ticket-link:hover {
+      color: inherit;
+    }
+
+    .ticket-top {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+      margin-bottom: var(--sp-2);
+    }
+
+    .ticket-subject {
+      font-family: var(--font-sans);
+      font-size: var(--fs-md);
+      font-weight: 600;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .ticket-meta {
+      margin-top: var(--sp-1);
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <section class="page-header">
+      <div class="container">
+        <div class="head-row">
+          <div>
+            <h1>My support</h1>
+            <p>Your requests to the <span data-brand-name>Analytical</span> team, and our replies.</p>
+          </div>
+          <a class="btn btn-primary" href="/pages/support/new.html">New request</a>
+        </div>
+      </div>
+    </section>
+
+    <section style="padding-block: var(--sp-6);">
+      <div class="container">
+
+        <!-- Loading -->
+        <div class="loading-block" id="loading-view" style="min-height: 40vh;">
+          <div class="spinner spinner-lg" role="status" aria-label="Loading your requests"></div>
+        </div>
+
+        <!-- Problem -->
+        <div class="hidden" id="problem-view">
+          <div class="empty-state">
+            <h3 id="problem-title">Could not load your requests</h3>
+            <p id="problem-text"></p>
+            <button class="btn btn-primary" type="button" onclick="window.location.reload()">Refresh</button>
+          </div>
+        </div>
+
+        <!-- Nothing yet -->
+        <div class="hidden" id="empty-view">
+          <div class="empty-state">
+            <h3>You have not sent any requests</h3>
+            <p>If you need help with your account, a payment or a dataset, send us a request and we will reply here.</p>
+            <a class="btn btn-primary" href="/pages/support/new.html">Contact support</a>
+          </div>
+        </div>
+
+        <!-- The list -->
+        <div class="hidden" id="list-view">
+          <p class="text-sm" id="list-count" style="margin-bottom: var(--sp-4);"></p>
+          <div class="ticket-list" id="ticket-list"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- My support behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Auth || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var CATEGORIES = {
+      account: 'My account',
+      payments: 'Payments',
+      dataset: 'A dataset',
+      abuse: 'Abuse report',
+      other: 'Other'
+    };
+
+    var STATUS = {
+      open:     { label: 'Open',          className: 'badge badge-info' },
+      answered: { label: 'Support replied', className: 'badge badge-brand' },
+      closed:   { label: 'Closed',        className: 'badge' }
+    };
+
+    function showView(name) {
+      $('loading-view').classList.toggle('hidden', name !== 'loading');
+      $('problem-view').classList.toggle('hidden', name !== 'problem');
+      $('empty-view').classList.toggle('hidden', name !== 'empty');
+      $('list-view').classList.toggle('hidden', name !== 'list');
+    }
+
+    function isMissingTable(error) {
+      var text = String((error && error.message) || '').toLowerCase();
+      return !!error && (
+        error.code === '42P01' ||
+        error.code === 'PGRST205' ||
+        text.indexOf('does not exist') !== -1 ||
+        text.indexOf('could not find the table') !== -1
+      );
+    }
+
+    function buildTicket(t) {
+      var card = document.createElement('a');
+      card.className = 'card card-hover ticket-link';
+      card.href = '/pages/support/ticket.html?id=' + encodeURIComponent(t.id);
+
+      var top = document.createElement('div');
+      top.className = 'ticket-top';
+
+      var status = STATUS[t.status] || STATUS.open;
+      var statusBadge = document.createElement('span');
+      statusBadge.className = status.className;
+      statusBadge.textContent = status.label;
+      top.appendChild(statusBadge);
+
+      var cat = document.createElement('span');
+      cat.className = 'badge';
+      cat.textContent = CATEGORIES[t.category] || 'Other';
+      top.appendChild(cat);
+
+      card.appendChild(top);
+
+      var subject = document.createElement('div');
+      subject.className = 'ticket-subject';
+      subject.textContent = t.subject;
+      card.appendChild(subject);
+
+      var meta = document.createElement('div');
+      meta.className = 'ticket-meta';
+      meta.textContent = 'Opened ' + Utils.formatDate(t.created_at) + '  |  Last activity ' + Utils.timeAgo(t.last_message_at);
+      card.appendChild(meta);
+
+      return card;
+    }
+
+    async function start() {
+      var context = await Auth.requireAuth();
+      if (!context) return; // not logged in: sent to the login page
+
+      // Only this member's own requests, even for staff accounts
+      var result = await sb
+        .from('support_tickets')
+        .select('id, subject, category, status, created_at, last_message_at')
+        .eq('user_id', context.user.id)
+        .order('last_message_at', { ascending: false })
+        .limit(50);
+
+      if (result.error) {
+        console.error('[Analytical] Could not load requests:', result.error);
+
+        var missing = isMissingTable(result.error);
+        $('problem-title').textContent = missing ? 'Support is not set up yet' : 'Could not load your requests';
+        $('problem-text').textContent = missing
+          ? 'Run the admin.sql file in the Supabase SQL Editor, then refresh this page.'
+          : sbHelpers.friendlyError(result.error);
+        showView('problem');
+        return;
+      }
+
+      var tickets = result.data || [];
+
+      if (!tickets.length) {
+        showView('empty');
+        return;
+      }
+
+      var list = $('ticket-list');
+      list.innerHTML = '';
+      tickets.forEach(function (t) { list.appendChild(buildTicket(t)); });
+
+      var replied = tickets.filter(function (t) { return t.status === 'answered'; }).length;
+      $('list-count').textContent =
+        tickets.length + (tickets.length === 1 ? ' request' : ' requests') +
+        (replied ? ', ' + replied + (replied === 1 ? ' with a reply from support' : ' with replies from support') : '');
+
+      showView('list');
+    }
+
+    start();
+  })();
+</script>
+</body>
+</html>

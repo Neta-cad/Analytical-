@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contact support | Analytical</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0a1628">
+
+  <!-- Navy is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .wrap {
+      max-width: 680px;
+    }
+
+    .counter {
+      text-align: right;
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .counter.is-over {
+      color: var(--danger);
+    }
+
+    .about-box {
+      padding: var(--sp-3) var(--sp-4);
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: var(--fs-sm);
+      margin-bottom: var(--sp-4);
+    }
+
+    .save-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-3);
+      align-items: center;
+    }
+
+    .stack > * + * {
+      margin-top: var(--sp-4);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <section class="page-header">
+      <div class="container">
+        <h1>Contact support</h1>
+        <p>Tell us what you need help with. We reply here, and you can read the reply on your My support page.</p>
+      </div>
+    </section>
+
+    <section style="padding-block: var(--sp-6);">
+      <div class="container">
+
+        <!-- Loading -->
+        <div class="loading-block" id="loading-view" style="min-height: 40vh;">
+          <div class="spinner spinner-lg" role="status" aria-label="Loading"></div>
+        </div>
+
+        <!-- Support is not set up -->
+        <div class="hidden" id="problem-view">
+          <div class="empty-state">
+            <h3>Support is not set up yet</h3>
+            <p>Run the <strong>admin.sql</strong> file in the Supabase SQL Editor, then refresh this page.</p>
+            <button class="btn btn-primary" type="button" onclick="window.location.reload()">Refresh</button>
+          </div>
+        </div>
+
+        <!-- The form -->
+        <div class="wrap stack hidden" id="form-view">
+
+          <div class="alert alert-warning hidden" id="suspended-note" role="alert">
+            Your account is suspended. You can still contact support here to ask about it.
+          </div>
+
+          <div class="alert alert-danger hidden" id="form-error" role="alert"></div>
+
+          <div class="card">
+            <div class="card-body">
+
+              <div class="about-box hidden" id="about-box"></div>
+
+              <form id="ticket-form" novalidate>
+
+                <div class="form-group">
+                  <label class="form-label" for="category">What is this about? <span class="req">*</span></label>
+                  <select class="select" id="category">
+                    <option value="">Select a topic</option>
+                    <option value="account">My account</option>
+                    <option value="payments">Payments and purchases</option>
+                    <option value="dataset">A dataset</option>
+                    <option value="abuse">Report abuse or a rule break</option>
+                    <option value="other">Something else</option>
+                  </select>
+                  <p class="form-hint" id="category-hint"></p>
+                  <p class="form-error hidden" id="category-error"></p>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="subject">Subject <span class="req">*</span></label>
+                  <input class="input" id="subject" type="text" maxlength="150" placeholder="A short summary of the problem">
+                  <p class="form-error hidden" id="subject-error"></p>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label" for="message">Message <span class="req">*</span></label>
+                  <textarea class="textarea" id="message" maxlength="5000" style="min-height: 160px;"
+                            placeholder="Describe what happened and what you expected. The more detail you give, the faster we can help."></textarea>
+                  <div class="counter" id="message-counter">0 / 5000</div>
+                  <p class="form-error hidden" id="message-error"></p>
+                </div>
+
+                <p class="form-hint" style="margin-bottom: var(--sp-4);">
+                  Never include your password. We will never ask for it.
+                </p>
+
+                <div class="save-bar">
+                  <button class="btn btn-primary btn-lg" type="submit" id="submit-btn">Send request</button>
+                  <a class="btn btn-secondary btn-lg" href="/pages/support/index.html">My requests</a>
+                </div>
+
+              </form>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- Contact support behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Auth || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    var HINTS = {
+      account: 'Tell us your username and what you were trying to do.',
+      payments: 'Include the payment reference (it starts with ANL-) and the dataset name.',
+      dataset: 'Say which dataset it is and what is wrong with it.',
+      abuse: 'Describe what happened and include the link to the page.',
+      other: 'Tell us how we can help.'
+    };
+
+    var datasetId = '';
+    var dirty = false;
+    var finished = false;
+
+    var form = $('ticket-form');
+    var submitBtn = $('submit-btn');
+    var formError = $('form-error');
+
+    var categoryInput = $('category');
+    var subjectInput = $('subject');
+    var messageInput = $('message');
+
+    /* ---------- Small helpers ---------- */
+    function showView(name) {
+      $('loading-view').classList.toggle('hidden', name !== 'loading');
+      $('problem-view').classList.toggle('hidden', name !== 'problem');
+      $('form-view').classList.toggle('hidden', name !== 'form');
+    }
+
+    function isMissingFunction(error) {
+      var text = String((error && error.message) || '').toLowerCase();
+      return !!error && (
+        error.code === 'PGRST202' ||
+        text.indexOf('could not find the function') !== -1 ||
+        text.indexOf('schema cache') !== -1
+      );
+    }
+
+    // Messages raised by our own database rules are already written for people
+    function dbMessage(error) {
+      return error && error.code === 'P0001' ? error.message : sbHelpers.friendlyError(error);
+    }
+
+    function showFormError(message) {
+      formError.textContent = message;
+      formError.classList.remove('hidden');
+      formError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    /* ---------- Hint under the topic ---------- */
+    categoryInput.addEventListener('change', function () {
+      $('category-hint').textContent = HINTS[categoryInput.value] || '';
+    });
+
+    /* ---------- Message counter ---------- */
+    function updateCounter() {
+      var length = messageInput.value.length;
+      var counter = $('message-counter');
+      counter.textContent = length + ' / 5000';
+      counter.classList.toggle('is-over', length > 5000);
+    }
+
+    messageInput.addEventListener('input', updateCounter);
+
+    /* ---------- Validation ---------- */
+    var rules = [
+      { input: categoryInput, check: function () { return categoryInput.value ? '' : 'Select a topic.'; } },
+      {
+        input: subjectInput,
+        check: function () {
+          var v = subjectInput.value.trim();
+          if (v.length < 3) return 'The subject must be at least 3 characters.';
+          if (v.length > 150) return 'The subject must be 150 characters or fewer.';
+          return '';
+        }
+      },
+      {
+        input: messageInput,
+        check: function () {
+          var v = messageInput.value.trim();
+          if (v.length < 10) return 'The message must be at least 10 characters.';
+          if (v.length > 5000) return 'The message must be 5000 characters or fewer.';
+          return '';
+        }
+      }
+    ];
+
+    rules.forEach(function (rule) {
+      var eventName = rule.input === categoryInput ? 'change' : 'blur';
+
+      rule.input.addEventListener(eventName, function () {
+        Utils.showFieldError(rule.input, rule.check());
+      });
+
+      rule.input.addEventListener('input', function () {
+        dirty = true;
+        if (rule.input.classList.contains('is-invalid')) {
+          Utils.showFieldError(rule.input, rule.check());
+        }
+      });
+    });
+
+    function validateAll() {
+      var firstBad = null;
+
+      rules.forEach(function (rule) {
+        var message = rule.check();
+        Utils.showFieldError(rule.input, message);
+        if (message && !firstBad) firstBad = rule.input;
+      });
+
+      if (firstBad) firstBad.focus();
+      return !firstBad;
+    }
+
+    window.addEventListener('beforeunload', function (e) {
+      if (!dirty || finished) return;
+      e.preventDefault();
+      e.returnValue = '';
+    });
+
+    /* ---------- Send ---------- */
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      formError.classList.add('hidden');
+
+      if (!validateAll()) return;
+
+      UI.setLoading(submitBtn, true);
+
+      var result = await sb.rpc('create_ticket', {
+        p_subject: subjectInput.value.trim(),
+        p_category: categoryInput.value,
+        p_body: messageInput.value.trim(),
+        p_dataset_id: datasetId || null
+      });
+
+      UI.setLoading(submitBtn, false);
+
+      if (result.error) {
+        console.error('[Analytical] Could not create the request:', result.error);
+
+        if (isMissingFunction(result.error)) {
+          showView('problem');
+          return;
+        }
+
+        showFormError(dbMessage(result.error));
+        return;
+      }
+
+      finished = true;
+      window.location.href = '/pages/support/ticket.html?id=' + encodeURIComponent(result.data);
+    });
+
+    /* ---------- If we came from a dataset page, mention it ---------- */
+    async function loadDataset(id) {
+      var result = await sb.from('datasets').select('id, title').eq('id', id).maybeSingle();
+      if (result.error || !result.data) return;
+
+      datasetId = result.data.id;
+
+      var box = $('about-box');
+      box.textContent = 'About the dataset: ' + result.data.title;
+      box.classList.remove('hidden');
+
+      categoryInput.value = 'dataset';
+      $('category-hint').textContent = HINTS.dataset;
+
+      if (!subjectInput.value.trim()) {
+        subjectInput.value = ('Question about: ' + result.data.title).slice(0, 150);
+      }
+    }
+
+    /* ---------- Protect the page, then show it ---------- */
+    async function start() {
+      var context = await Auth.requireAuth();
+      if (!context) return; // not logged in: sent to the login page
+
+      if (context.profile && context.profile.is_suspended) {
+        $('suspended-note').classList.remove('hidden');
+      }
+
+      var dataset = String(Utils.getParam('dataset') || '').trim();
+      if (UUID.test(dataset)) await loadDataset(dataset);
+
+      var topic = String(Utils.getParam('topic') || '').trim();
+      if (!categoryInput.value && HINTS[topic]) {
+        categoryInput.value = topic;
+        $('category-hint').textContent = HINTS[topic];
+      }
+
+      dirty = false;
+      showView('form');
+    }
+
+    start();
+  })();
+</script>
+</body>
+</html>

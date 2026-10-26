@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Contact | Analytical</title>
   <meta name="description" content="Contact the Analytical team for support, privacy requests or to report a problem.">
-  <meta name="theme-color" content="#0a0a0a">
+  <meta name="theme-color" content="#0a1628">
 
-  <!-- Black is the default theme. A saved choice is respected. -->
+  <!-- Navy is the default theme. A saved choice is respected. -->
   <script>
     (function () {
       var key = 'analytical-theme';
@@ -66,14 +66,31 @@
       font-size: var(--fs-sm);
     }
 
-    .contact-card .btn {
-      margin-top: auto;
-      align-self: flex-start;
-    }
-
     .contact-card .btn-wrap {
       margin-top: auto;
       padding-top: var(--sp-3);
+    }
+
+    .ticket-cta {
+      max-width: 640px;
+      padding: var(--sp-5);
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-left: 3px solid var(--brand-600);
+      border-radius: var(--radius-lg);
+    }
+
+    .ticket-cta h2 {
+      font-family: var(--font-sans);
+      font-size: var(--fs-md);
+      margin-bottom: var(--sp-1);
+    }
+
+    .ticket-cta-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+      margin-top: var(--sp-4);
     }
 
     .tips {
@@ -100,15 +117,33 @@
     <section class="page-header">
       <div class="container">
         <h1>Contact us</h1>
-        <p>Reach the <span data-brand-name>Analytical</span> team by email.</p>
+        <p>Reach the <span data-brand-name>Analytical</span> team through a support request, or by email.</p>
       </div>
     </section>
 
     <section style="padding-block: var(--sp-6);">
       <div class="container">
 
-        <!-- Shown when the support email is set in config.js -->
-        <div id="contact-ready" class="hidden">
+        <!-- Support request: the main way to reach us -->
+        <div class="ticket-cta">
+          <h2>Open a support request</h2>
+          <p class="text-sm">The fastest way to get help. We reply inside your account, so you can follow the whole conversation in one place.</p>
+
+          <div class="ticket-cta-actions" data-auth="in">
+            <a class="btn btn-primary" href="/pages/support/new.html">Contact support</a>
+            <a class="btn btn-secondary" href="/pages/support/index.html">My requests</a>
+          </div>
+
+          <div class="ticket-cta-actions" data-auth="out">
+            <a class="btn btn-primary" href="/pages/auth/login.html?next=%2Fpages%2Fsupport%2Fnew.html">Log in to contact support</a>
+            <a class="btn btn-secondary" href="/pages/auth/register.html">Create account</a>
+          </div>
+        </div>
+
+        <!-- Email: shown when the support email is set in config.js -->
+        <div id="contact-ready" class="hidden" style="margin-top: var(--sp-8);">
+
+          <h2 style="font-size: var(--fs-lg); margin-bottom: var(--sp-3);">Or email us</h2>
 
           <div class="email-box">
             <div>
@@ -123,7 +158,7 @@
             <div class="card contact-card">
               <h2>General support</h2>
               <p>Questions about your account, logging in, your profile or how something works.</p>
-              <div class="btn-wrap"><a class="btn btn-primary btn-sm" id="link-support" href="#">Email support</a></div>
+              <div class="btn-wrap"><a class="btn btn-secondary btn-sm" id="link-support" href="#">Email support</a></div>
             </div>
 
             <div class="card contact-card">
@@ -139,26 +174,16 @@
             </div>
 
           </div>
-
-          <div class="tips" style="margin-top: var(--sp-8);">
-            <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">To help us help you</h2>
-            <ul>
-              <li>Write from the email address on your account, or include it in your message.</li>
-              <li>Tell us what you were trying to do and what happened instead.</li>
-              <li>Never send your password. We will never ask for it.</li>
-            </ul>
-            <p class="text-sm mt-4">You may also find a quick answer in the <a href="/pages/help.html">Help center</a>.</p>
-          </div>
-
         </div>
 
-        <!-- Shown if the support email has not been set in config.js yet -->
-        <div id="contact-missing" class="hidden">
-          <div class="empty-state">
-            <h3>Contact details are being set up</h3>
-            <p>Our support email will be available here soon. In the meantime, the Help center answers common questions.</p>
-            <a class="btn btn-primary" href="/pages/help.html">Open the Help center</a>
-          </div>
+        <div class="tips" style="margin-top: var(--sp-8);">
+          <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">To help us help you</h2>
+          <ul>
+            <li>Tell us what you were trying to do and what happened instead.</li>
+            <li>For payment problems, include the payment reference (it starts with ANL-).</li>
+            <li>Never send your password. We will never ask for it.</li>
+          </ul>
+          <p class="text-sm mt-4">You may also find a quick answer in the <a href="/pages/help.html">Help center</a>.</p>
         </div>
 
       </div>
@@ -191,10 +216,8 @@
     var email = String(APP_CONFIG.brand.supportEmail || '').trim();
     var valid = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) && email.indexOf('REPLACE_') === -1;
 
-    if (!valid) {
-      $('contact-missing').classList.remove('hidden');
-      return;
-    }
+    // No email set: the support request above is still available
+    if (!valid) return;
 
     function mailto(subject, body) {
       return 'mailto:' + email +

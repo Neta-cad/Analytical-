@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Support request | Analytical</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0a1628">
+
+  <!-- Navy is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .wrap {
+      max-width: 780px;
+    }
+
+    .ticket-head h1 {
+      font-size: var(--fs-xl);
+      word-break: break-word;
+      margin: var(--sp-2) 0;
+    }
+
+    @media (min-width: 768px) {
+      .ticket-head h1 { font-size: var(--fs-2xl); }
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+    }
+
+    .ticket-meta {
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .thread {
+      display: grid;
+      gap: var(--sp-3);
+    }
+
+    .msg {
+      padding: var(--sp-4);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+    }
+
+    .msg.staff {
+      background: var(--bg-soft);
+      border-left: 3px solid var(--brand-600);
+    }
+
+    .msg-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: var(--sp-2);
+      margin-bottom: var(--sp-2);
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .msg-who {
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .msg-body {
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--text-soft);
+      font-size: var(--fs-sm);
+    }
+
+    .counter {
+      text-align: right;
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .counter.is-over {
+      color: var(--danger);
+    }
+
+    .reply-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+      align-items: center;
+    }
+
+    .stack > * + * {
+      margin-top: var(--sp-4);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <!-- Loading -->
+    <div class="loading-block" id="loading-view" style="min-height: 60vh;">
+      <div class="spinner spinner-lg" role="status" aria-label="Loading your request"></div>
+    </div>
+
+    <!-- Not found, or a problem -->
+    <div class="container hidden" id="problem-view" style="padding-block: var(--sp-12);">
+      <div class="empty-state">
+        <h2 id="problem-title">Request not found</h2>
+        <p id="problem-text">This request may not exist, or it belongs to another account.</p>
+        <a class="btn btn-primary" href="/pages/support/index.html">My support</a>
+      </div>
+    </div>
+
+    <!-- The request -->
+    <section class="hidden" id="ticket-view" style="padding-block: var(--sp-6);">
+      <div class="container">
+        <div class="wrap stack">
+
+          <a class="text-sm" href="/pages/support/index.html">&larr; My support</a>
+
+          <div class="ticket-head">
+            <div class="badge-row" id="ticket-badges"></div>
+            <h1 id="ticket-subject">Request</h1>
+            <div class="ticket-meta" id="ticket-meta"></div>
+          </div>
+
+          <div class="thread" id="thread" aria-live="polite"></div>
+
+          <div class="alert alert-danger hidden" id="reply-error" role="alert"></div>
+
+          <!-- Reply box -->
+          <div class="card" id="reply-card">
+            <div class="card-body">
+              <form id="reply-form" novalidate>
+                <div class="form-group" style="margin-bottom: var(--sp-3);">
+                  <label class="form-label" for="reply-body">Your reply</label>
+                  <textarea class="textarea" id="reply-body" maxlength="5000" style="min-height: 110px;"
+                            placeholder="Write your reply here"></textarea>
+                  <div class="counter" id="reply-counter">0 / 5000</div>
+                  <p class="form-error hidden" id="reply-body-error"></p>
+                </div>
+
+                <div class="reply-actions">
+                  <button class="btn btn-primary" type="submit" id="reply-btn">Send reply</button>
+                  <button class="btn btn-secondary" type="button" id="refresh-btn">Check for new replies</button>
+                  <button class="btn btn-ghost" type="button" id="close-btn">Close this request</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <!-- Shown when the request is closed -->
+          <div class="card hidden" id="closed-card">
+            <div class="card-body">
+              <p class="text-sm">This request is closed. If you still need help, start a new request.</p>
+              <a class="btn btn-primary btn-sm mt-4" href="/pages/support/new.html">New request</a>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/auth.js"></script>
+<script src="/assets/js/components.js"></script>
+
+<!-- Support request behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Auth || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    var CATEGORIES = {
+      account: 'My account',
+      payments: 'Payments',
+      dataset: 'A dataset',
+      abuse: 'Abuse report',
+      other: 'Other'
+    };
+
+    var STATUS = {
+      open:     { label: 'Open',            className: 'badge badge-info' },
+      answered: { label: 'Support replied', className: 'badge badge-brand' },
+      closed:   { label: 'Closed',          className: 'badge' }
+    };
+
+    var user = null;
+    var ticketId = '';
+    var ticket = null;
+
+    var replyForm = $('reply-form');
+    var replyBody = $('reply-body');
+    var replyBtn = $('reply-btn');
+    var replyError = $('reply-error');
+
+    /* ---------- Small helpers ---------- */
+    function showView(name, title, text) {
+      $('loading-view').classList.toggle('hidden', name !== 'loading');
+      $('problem-view').classList.toggle('hidden', name !== 'problem');
+      $('ticket-view').classList.toggle('hidden', name !== 'ticket');
+
+      if (name === 'problem') {
+        if (title) $('problem-title').textContent = title;
+        if (text) $('problem-text').textContent = text;
+      }
+    }
+
+    function isMissingTable(error) {
+      var t = String((error && error.message) || '').toLowerCase();
+      return !!error && (
+        error.code === '42P01' ||
+        error.code === 'PGRST205' ||
+        t.indexOf('does not exist') !== -1 ||
+        t.indexOf('could not find the table') !== -1
+      );
+    }
+
+    // Messages raised by our own database rules are already written for people
+    function dbMessage(error) {
+      return error && error.code === 'P0001' ? error.message : sbHelpers.friendlyError(error);
+    }
+
+    function showReplyError(message) {
+      replyError.textContent = message;
+      replyError.classList.remove('hidden');
+    }
+
+    /* ---------- Header ---------- */
+    function renderHeader() {
+      document.title = ticket.subject + ' | ' + APP_CONFIG.brand.name;
+      $('ticket-subject').textContent = ticket.subject;
+
+      var badges = $('ticket-badges');
+      badges.innerHTML = '';
+
+      var status = STATUS[ticket.status] || STATUS.open;
+      var statusBadge = document.createElement('span');
+      statusBadge.className = status.className;
+      statusBadge.textContent = status.label;
+      badges.appendChild(statusBadge);
+
+      var cat = document.createElement('span');
+      cat.className = 'badge';
+      cat.textContent = CATEGORIES[ticket.category] || 'Other';
+      badges.appendChild(cat);
+
+      var meta = $('ticket-meta');
+      meta.textContent = '';
+
+      var bits = [
+        'Reference ' + String(ticket.id).slice(0, 8).toUpperCase(),
+        'Opened ' + Utils.formatDate(ticket.created_at)
+      ];
+      meta.appendChild(document.createTextNode(bits.join('  |  ')));
+
+      if (ticket.dataset && ticket.dataset.id) {
+        meta.appendChild(document.createTextNode('  |  About: '));
+        var link = document.createElement('a');
+        link.href = '/pages/data/dataset.html?id=' + encodeURIComponent(ticket.dataset.id);
+        link.textContent = ticket.dataset.title || 'a dataset';
+        meta.appendChild(link);
+      }
+
+      var closed = ticket.status === 'closed';
+      $('reply-card').classList.toggle('hidden', closed);
+      $('closed-card').classList.toggle('hidden', !closed);
+    }
+
+    /* ---------- Messages ---------- */
+    function renderMessages(messages) {
+      var thread = $('thread');
+      thread.innerHTML = '';
+
+      messages.forEach(function (m) {
+        var box = document.createElement('div');
+        box.className = 'msg' + (m.from_staff ? ' staff' : '');
+
+        var head = document.createElement('div');
+        head.className = 'msg-head';
+
+        var who = document.createElement('span');
+        who.className = 'msg-who';
+        who.textContent = m.from_staff ? APP_CONFIG.brand.name + ' support' : 'You';
+        head.appendChild(who);
+
+        var when = document.createElement('span');
+        when.textContent = Utils.formatDate(m.created_at) + ', ' + Utils.timeAgo(m.created_at);
+        head.appendChild(when);
+
+        var body = document.createElement('div');
+        body.className = 'msg-body';
+        body.textContent = m.body;
+
+        box.appendChild(head);
+        box.appendChild(body);
+        thread.appendChild(box);
+      });
+    }
+
+    /* ---------- Load ---------- */
+    async function load() {
+      var found = await sb
+        .from('support_tickets')
+        .select('*, dataset:datasets(id, title)')
+        .eq('id', ticketId)
+        .maybeSingle();
+
+      if (found.error) {
+        console.error('[Analytical] Could not load the request:', found.error);
+
+        if (isMissingTable(found.error)) {
+          showView('problem', 'Support is not set up yet', 'Run the admin.sql file in the Supabase SQL Editor, then refresh this page.');
+        } else {
+          showView('problem', 'Could not load this request', sbHelpers.friendlyError(found.error));
+        }
+        return false;
+      }
+
+      // Only the member's own requests are shown here
+      if (!found.data || found.data.user_id !== user.id) {
+        showView('problem');
+        return false;
+      }
+
+      ticket = found.data;
+
+      var messages = await sb
+        .from('ticket_messages')
+        .select('id, from_staff, body, created_at')
+        .eq('ticket_id', ticketId)
+        .order('created_at', { ascending: true });
+
+      if (messages.error) {
+        console.error('[Analytical] Could not load messages:', messages.error);
+        showView('problem', 'Could not load this request', sbHelpers.friendlyError(messages.error));
+        return false;
+      }
+
+      renderHeader();
+      renderMessages(messages.data || []);
+      showView('ticket');
+      return true;
+    }
+
+    /* ---------- Reply ---------- */
+    function updateCounter() {
+      var length = replyBody.value.length;
+      var counter = $('reply-counter');
+      counter.textContent = length + ' / 5000';
+      counter.classList.toggle('is-over', length > 5000);
+    }
+
+    replyBody.addEventListener('input', function () {
+      updateCounter();
+      if (replyBody.classList.contains('is-invalid')) Utils.showFieldError(replyBody, checkReply());
+    });
+
+    function checkReply() {
+      var v = replyBody.value.trim();
+      if (!v) return 'Write a reply first.';
+      if (v.length > 5000) return 'The reply must be 5000 characters or fewer.';
+      return '';
+    }
+
+    replyForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      replyError.classList.add('hidden');
+
+      var problem = checkReply();
+      Utils.showFieldError(replyBody, problem);
+      if (problem) { replyBody.focus(); return; }
+
+      UI.setLoading(replyBtn, true);
+      var result = await sb.rpc('reply_ticket', { p_ticket_id: ticketId, p_body: replyBody.value.trim() });
+      UI.setLoading(replyBtn, false);
+
+      if (result.error) {
+        console.error('[Analytical] Could not send the reply:', result.error);
+        showReplyError(dbMessage(result.error));
+        return;
+      }
+
+      replyBody.value = '';
+      updateCounter();
+      await load();
+      UI.toast.success('Reply sent.');
+    });
+
+    /* ---------- Refresh and close ---------- */
+    $('refresh-btn').addEventListener('click', async function () {
+      var btn = $('refresh-btn');
+      UI.setLoading(btn, true);
+      var ok = await load();
+      UI.setLoading(btn, false);
+      if (ok) UI.toast.info('Up to date.');
+    });
+
+    $('close-btn').addEventListener('click', async function () {
+      var ok = await UI.confirm({
+        title: 'Close this request?',
+        message: 'You will not be able to reply to it afterwards. You can start a new request any time.',
+        confirmText: 'Close request'
+      });
+      if (!ok) return;
+
+      var btn = $('close-btn');
+      UI.setLoading(btn, true);
+      var result = await sb.rpc('set_ticket_status', { p_ticket_id: ticketId, p_status: 'closed' });
+      UI.setLoading(btn, false);
+
+      if (result.error) {
+        UI.toast.error(dbMessage(result.error));
+        return;
+      }
+
+      await load();
+      UI.toast.success('Request closed.');
+    });
+
+    /* ---------- Start ---------- */
+    async function start() {
+      var context = await Auth.requireAuth();
+      if (!context) return; // not logged in: sent to the login page
+
+      user = context.user;
+      ticketId = String(Utils.getParam('id') || '').trim();
+
+      if (!UUID.test(ticketId)) {
+        showView('problem');
+        return;
+      }
+
+      await load();
+    }
+
+    start();
+  })();
+</script>
+</body>
+</html>
