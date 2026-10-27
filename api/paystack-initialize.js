@@ -25,6 +25,20 @@ module.exports = async function handler(req, res) {
   const user = await lib.getUser(s, token);
   if (!user || !user.email) return lib.send(res, 401, { error: 'Log in to continue.' });
 
+  /* Suspended members cannot buy */
+  const standing = await lib.rest(s, 'profiles?id=eq.' + user.id + '&select=is_suspended&limit=1');
+
+  if (!standing.ok) {
+    console.error('Account check failed:', standing.status);
+    return lib.send(res, 500, { error: 'Something went wrong. Please try again.' });
+  }
+
+  const account = Array.isArray(standing.data) ? standing.data[0] : null;
+
+  if (!account || account.is_suspended) {
+    return lib.send(res, 403, { error: 'Your account is suspended, so you cannot buy right now. Contact support to ask about it.' });
+  }
+
   /* Which dataset? */
   const datasetId = String(lib.readBody(req).datasetId || '');
   if (!lib.UUID.test(datasetId)) return lib.send(res, 400, { error: 'That dataset link is not valid.' });

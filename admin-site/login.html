@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Staff login | Analytical Admin</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0a1628">
+
+  <!-- Navy is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .input-group.no-icon .input {
+      padding-left: 0.85rem;
+      padding-right: 3rem;
+    }
+
+    .auth-title {
+      font-size: var(--fs-xl);
+      margin-bottom: var(--sp-1);
+    }
+
+    .auth-sub {
+      margin-bottom: var(--sp-5);
+      font-size: var(--fs-sm);
+    }
+
+    .label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+    }
+
+    .label-row a {
+      font-size: var(--fs-xs);
+      font-weight: 600;
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+    <div class="auth-card-wrap" style="min-height: calc(100vh - var(--nav-height));">
+      <div class="card auth-card">
+        <div class="card-body">
+
+          <h1 class="auth-title">Staff login</h1>
+          <p class="auth-sub">This area is for Analytical staff. Members should use the main site.</p>
+
+          <div class="alert alert-danger hidden" id="form-error" role="alert" style="margin-bottom: var(--sp-4);"></div>
+
+          <form id="login-form" novalidate>
+
+            <div class="form-group">
+              <label class="form-label" for="email">Email</label>
+              <input class="input" id="email" name="email" type="email"
+                     autocomplete="email" autocapitalize="none" inputmode="email"
+                     maxlength="254" placeholder="you@example.com">
+              <p class="form-error hidden" id="email-error"></p>
+            </div>
+
+            <div class="form-group">
+              <div class="label-row">
+                <label class="form-label" for="password">Password</label>
+                <a href="#" data-main-site="/pages/auth/forgot.html">Forgot password?</a>
+              </div>
+              <div class="input-group no-icon">
+                <input class="input" id="password" name="password" type="password"
+                       autocomplete="current-password" maxlength="72" placeholder="Your password">
+                <button class="input-action" type="button" id="toggle-password" aria-label="Show password">
+                  <svg id="icon-eye" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  <svg id="icon-eye-off" class="hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path><path d="m1 1 22 22"></path></svg>
+                </button>
+              </div>
+              <p class="form-error hidden" id="password-error"></p>
+            </div>
+
+            <button class="btn btn-primary btn-lg btn-block" type="submit" id="submit-btn">Log in</button>
+          </form>
+
+          <p class="text-center text-sm mt-6">
+            <a href="#" data-main-site="">Back to the main site</a>
+          </p>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/components.js"></script>
+<script src="/assets/js/admin.js"></script>
+
+<!-- Staff login behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Admin || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var form = $('login-form');
+    var submitBtn = $('submit-btn');
+    var formError = $('form-error');
+    var emailInput = $('email');
+    var passwordInput = $('password');
+
+    var next = Utils.safeRedirectPath(Utils.getParam('next'), '/index.html');
+
+    function showFormError(message) {
+      formError.textContent = message;
+      formError.classList.remove('hidden');
+    }
+
+    /* ---------- Already signed in as staff: go straight in ---------- */
+    (async function () {
+      var result = await Admin.check();
+      if (result.state === 'ok') window.location.replace(next);
+    })();
+
+    /* ---------- Show or hide the password ---------- */
+    $('toggle-password').addEventListener('click', function () {
+      var showing = passwordInput.type === 'text';
+      passwordInput.type = showing ? 'password' : 'text';
+      this.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+      $('icon-eye').classList.toggle('hidden', !showing);
+      $('icon-eye-off').classList.toggle('hidden', showing);
+    });
+
+    /* ---------- Validation ---------- */
+    function checkEmail() { return Utils.validate.email(emailInput.value); }
+    function checkPassword() { return passwordInput.value ? '' : 'Enter your password.'; }
+
+    emailInput.addEventListener('blur', function () {
+      Utils.showFieldError(emailInput, checkEmail());
+    });
+
+    emailInput.addEventListener('input', function () {
+      if (emailInput.classList.contains('is-invalid')) Utils.showFieldError(emailInput, checkEmail());
+    });
+
+    passwordInput.addEventListener('input', function () {
+      if (passwordInput.classList.contains('is-invalid')) Utils.showFieldError(passwordInput, checkPassword());
+    });
+
+    /* ---------- Log in ---------- */
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      formError.classList.add('hidden');
+
+      var emailProblem = checkEmail();
+      var passwordProblem = checkPassword();
+
+      Utils.showFieldError(emailInput, emailProblem);
+      Utils.showFieldError(passwordInput, passwordProblem);
+
+      if (emailProblem) { emailInput.focus(); return; }
+      if (passwordProblem) { passwordInput.focus(); return; }
+
+      UI.setLoading(submitBtn, true);
+
+      var signIn = await sb.auth.signInWithPassword({
+        email: emailInput.value.trim().toLowerCase(),
+        password: passwordInput.value
+      });
+
+      if (signIn.error) {
+        UI.setLoading(submitBtn, false);
+        showFormError(sbHelpers.friendlyError(signIn.error));
+        return;
+      }
+
+      // Signed in. Only staff may stay.
+      var staff = await Admin.check();
+
+      if (staff.state !== 'ok') {
+        await sb.auth.signOut();
+        UI.setLoading(submitBtn, false);
+
+        showFormError(
+          staff.state === 'error'
+            ? 'Could not check your access. Make sure admin.sql has been run in Supabase, then try again.'
+            : 'This account does not have staff access. Members use the main site.'
+        );
+        return;
+      }
+
+      window.location.replace(next);
+    });
+  })();
+</script>
+</body>
+</html>

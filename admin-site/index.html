@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Overview | Analytical Admin</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0a1628">
+
+  <!-- Navy is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .head-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: var(--sp-4);
+    }
+
+    .group-title {
+      font-family: var(--font-sans);
+      font-size: var(--fs-xs);
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--brand-500);
+      margin-bottom: var(--sp-3);
+    }
+
+    [data-theme="light"] .group-title {
+      color: var(--brand-800);
+    }
+
+    .stat-card.attention .stat-value {
+      color: var(--danger);
+    }
+
+    .stack > * + * {
+      margin-top: var(--sp-6);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <section class="page-header">
+      <div class="container">
+        <div class="head-row">
+          <div>
+            <h1>Overview</h1>
+            <p id="signed-in-as">Real numbers from your database.</p>
+          </div>
+          <button class="btn btn-secondary" type="button" id="refresh-btn">Refresh</button>
+        </div>
+      </div>
+    </section>
+
+    <section style="padding-block: var(--sp-6);">
+      <div class="container">
+
+        <!-- Loading -->
+        <div class="loading-block" id="loading-view" style="min-height: 40vh;">
+          <div class="spinner spinner-lg" role="status" aria-label="Loading"></div>
+        </div>
+
+        <!-- Problem -->
+        <div class="hidden" id="problem-view">
+          <div class="empty-state">
+            <h3 id="problem-title">Could not load the overview</h3>
+            <p id="problem-text"></p>
+            <button class="btn btn-primary" type="button" onclick="window.location.reload()">Refresh</button>
+          </div>
+        </div>
+
+        <!-- The numbers -->
+        <div class="stack hidden" id="content-view">
+
+          <div>
+            <h2 class="group-title">Needs attention</h2>
+            <div class="grid-3" id="group-attention"></div>
+          </div>
+
+          <div>
+            <h2 class="group-title">Platform</h2>
+            <div class="grid-3" id="group-platform"></div>
+          </div>
+
+          <div>
+            <h2 class="group-title">Money (naira)</h2>
+            <div class="grid-4" id="group-money"></div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/components.js"></script>
+<script src="/assets/js/admin.js"></script>
+
+<!-- Overview behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Admin || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    function showView(name) {
+      $('loading-view').classList.toggle('hidden', name !== 'loading');
+      $('problem-view').classList.toggle('hidden', name !== 'problem');
+      $('content-view').classList.toggle('hidden', name !== 'content');
+    }
+
+    function count(n) {
+      return Number(n || 0).toLocaleString();
+    }
+
+    function money(n) {
+      return APP_CONFIG.formatMoney(n, 'NGN');
+    }
+
+    function card(label, value, note, attention) {
+      var wrap = document.createElement('div');
+      wrap.className = 'card';
+
+      var body = document.createElement('div');
+      body.className = 'card-body stat-card' + (attention ? ' attention' : '');
+
+      var l = document.createElement('div');
+      l.className = 'stat-label';
+      l.textContent = label;
+
+      var v = document.createElement('div');
+      v.className = 'stat-value';
+      v.textContent = value;
+
+      var n = document.createElement('div');
+      n.className = 'stat-note';
+      n.textContent = note;
+
+      body.appendChild(l);
+      body.appendChild(v);
+      body.appendChild(n);
+      wrap.appendChild(body);
+      return wrap;
+    }
+
+    function fill(id, cards) {
+      var group = $(id);
+      group.innerHTML = '';
+      cards.forEach(function (c) { group.appendChild(c); });
+    }
+
+    function render(o) {
+      fill('group-attention', [
+        card('Open support requests', count(o.open_tickets), 'Waiting for a reply or closing', Number(o.open_tickets) > 0),
+        card('Open reports', count(o.open_reports), 'Datasets and profiles reported', Number(o.open_reports) > 0),
+        card('Suspended members', count(o.suspended), 'Accounts currently suspended', false)
+      ]);
+
+      fill('group-platform', [
+        card('Members', count(o.members), count(o.members_7d) + ' joined in the last 7 days', false),
+        card('Published datasets', count(o.datasets_published),
+             count(o.datasets_total) + ' in total, ' + count(o.datasets_removed) + ' taken down', false),
+        card('Downloads', count(o.downloads), 'Across all datasets', false)
+      ]);
+
+      fill('group-money', [
+        card('Paid sales', count(o.sales_count), 'Completed purchases', false),
+        card('Gross sales', money(o.gross), 'Total paid by buyers', false),
+        card('Your commission', money(o.commission), 'Your share of every sale', false),
+        card('Owed to sellers', money(o.owed_to_sellers), 'Earned and not yet paid out', false)
+      ]);
+    }
+
+    async function load() {
+      showView('loading');
+
+      var result = await sb.rpc('admin_overview');
+
+      if (result.error) {
+        console.error('[Analytical Admin] Could not load the overview:', result.error);
+
+        $('problem-title').textContent = Admin.isMissingSetup(result.error)
+          ? 'The admin database is not set up yet'
+          : 'Could not load the overview';
+
+        $('problem-text').textContent = Admin.isMissingSetup(result.error)
+          ? 'Run the admin.sql file in the Supabase SQL Editor, then refresh this page.'
+          : Admin.message(result.error);
+
+        showView('problem');
+        return;
+      }
+
+      render(result.data || {});
+      showView('content');
+    }
+
+    $('refresh-btn').addEventListener('click', async function () {
+      var btn = $('refresh-btn');
+      UI.setLoading(btn, true);
+      await load();
+      UI.setLoading(btn, false);
+    });
+
+    async function start() {
+      var context = await Admin.require();
+      if (!context) return; // sent to the login page, or shown a message
+
+      var name = context.profile.full_name || context.profile.username;
+      var role = context.profile.user_role === 'admin' ? 'Admin' : 'Moderator';
+      $('signed-in-as').textContent = 'Signed in as ' + name + ' (' + role + '). Real numbers from your database.';
+
+      load();
+    }
+
+    start();
+  })();
+</script>
+</body>
+</html>

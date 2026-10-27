@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Profile | Analytical</title>
-  <meta name="theme-color" content="#0a0a0a">
+  <meta name="theme-color" content="#0a1628">
 
-  <!-- Black is the default theme. A saved choice is respected. -->
+  <!-- Navy is the default theme. A saved choice is respected. -->
   <script>
     (function () {
       var key = 'analytical-theme';
@@ -30,7 +30,7 @@
   <style>
     .profile-hero {
       background:
-        radial-gradient(760px 300px at 20% -30%, rgba(212, 175, 55, 0.14), transparent 65%),
+        radial-gradient(760px 300px at 20% -30%, rgba(var(--gold-rgb), 0.14), transparent 65%),
         var(--bg-soft);
       border-bottom: 1px solid var(--border);
       padding-block: var(--sp-8);
@@ -175,6 +175,7 @@
             <div class="profile-actions">
               <a class="btn btn-primary hidden" id="edit-btn" href="/pages/profile/edit.html">Edit profile</a>
               <button class="btn btn-secondary" type="button" id="copy-btn">Copy profile link</button>
+              <button class="btn btn-ghost hidden" type="button" id="open-report">Report profile</button>
             </div>
           </div>
         </div>
@@ -250,6 +251,7 @@
 <script src="/assets/js/utils.js"></script>
 <script src="/assets/js/auth.js"></script>
 <script src="/assets/js/components.js"></script>
+<script src="/assets/js/report.js"></script>
 
 <!-- Profile page behavior -->
 <script>
@@ -331,9 +333,13 @@
       if (profile.is_verified) addBadge('Verified', 'badge badge-brand');
       if (profile.user_role === 'admin') addBadge('Admin', 'badge badge-warning');
       if (profile.user_role === 'moderator') addBadge('Moderator', 'badge badge-info');
+      if (profile.is_suspended) addBadge('Suspended', 'badge badge-danger');
       if (profile.country) addBadge(Utils.countryName(profile.country), 'badge');
 
       $('edit-btn').classList.toggle('hidden', !isOwn);
+
+      // Members can report other people's profiles, never their own
+      $('open-report').classList.toggle('hidden', isOwn);
 
       /* About */
       if (profile.bio) {
@@ -394,6 +400,12 @@
         var ok = await Utils.copyText(link);
         if (ok) UI.toast.success('Profile link copied.');
         else UI.toast.error('Could not copy the link. Please copy it from the address bar.');
+      });
+
+      /* Report */
+      $('open-report').addEventListener('click', function () {
+        if (!window.Report) return;
+        Report.open({ type: 'profile', id: profile.id, label: displayName + ' (@' + profile.username + ')' });
       });
     }
 

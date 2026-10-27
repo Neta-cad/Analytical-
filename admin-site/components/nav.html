@@ -1,0 +1,64 @@
+<!-- ==========================================================
+     nav.html — admin site top bar and mobile menu.
+     Add one link per admin page as each page is built.
+     data-admin-only hides a link from moderators.
+     ========================================================== -->
+
+<header class="site-nav">
+  <div class="container nav-inner">
+
+    <a class="nav-brand" href="/index.html" aria-label="Admin overview">
+      <span class="nav-brand-mark" data-brand-letter>A</span>
+      <span data-brand-name>Analytical Admin</span>
+    </a>
+
+    <ul class="nav-links" role="list">
+      <li><a class="nav-link" href="/index.html">Overview</a></li>
+      <li><a class="nav-link" href="/members.html">Members</a></li>
+    </ul>
+
+    <div class="nav-actions">
+
+      <button class="nav-icon-btn" type="button" data-theme-toggle aria-label="Switch theme" aria-pressed="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="M12 3v18"></path>
+          <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"></path>
+        </svg>
+      </button>
+
+      <!-- Desktop: who is signed in, and sign out -->
+      <div class="nav-auth-desktop">
+        <span class="text-sm truncate" data-user-name style="max-width: 160px;"></span>
+        <span class="badge badge-brand" data-user-role></span>
+        <button class="btn btn-ghost btn-sm" type="button" data-logout>Log out</button>
+      </div>
+
+      <button class="nav-toggle" type="button" data-nav-toggle
+              aria-label="Open menu" aria-expanded="false" aria-controls="nav-drawer">
+        <span class="nav-toggle-bars"></span>
+      </button>
+
+    </div>
+  </div>
+</header>
+
+<!-- The drawer sits OUTSIDE the header on purpose: the header uses a blur
+     effect, which would break a fixed-position child. -->
+<div class="nav-drawer" id="nav-drawer" data-nav-drawer>
+
+  <div class="nav-drawer-group">
+    <div class="nav-drawer-title">Staff area</div>
+    <a class="nav-link" href="/index.html">Overview</a>
+    <a class="nav-link" href="/members.html">Members</a>
+  </div>
+
+  <div class="nav-drawer-actions">
+    <p class="text-xs text-muted" style="padding: 0 var(--sp-4);">
+      Signed in as <strong data-user-name></strong> (<span data-user-role></span>)
+    </p>
+    <a class="btn btn-secondary btn-block" href="#" data-main-site="">Go to the main site</a>
+    <button class="btn btn-secondary btn-block" type="button" data-logout>Log out</button>
+  </div>
+
+</div>

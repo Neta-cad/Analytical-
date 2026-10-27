@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dataset | Analytical</title>
-  <meta name="theme-color" content="#0a0a0a">
+  <meta name="theme-color" content="#0a1628">
 
-  <!-- Black is the default theme. A saved choice is respected. -->
+  <!-- Navy is the default theme. A saved choice is respected. -->
   <script>
     (function () {
       var key = 'analytical-theme';
@@ -30,7 +30,7 @@
   <style>
     .dataset-hero {
       background:
-        radial-gradient(760px 300px at 20% -30%, rgba(212, 175, 55, 0.14), transparent 65%),
+        radial-gradient(760px 300px at 20% -30%, rgba(var(--gold-rgb), 0.14), transparent 65%),
         var(--bg-soft);
       border-bottom: 1px solid var(--border);
       padding-block: var(--sp-6);
@@ -134,6 +134,13 @@
       text-overflow: ellipsis;
     }
 
+    .help-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+      margin-top: var(--sp-3);
+    }
+
     .stack > * + * {
       margin-top: var(--sp-4);
     }
@@ -202,6 +209,18 @@
                   </div>
                   <div class="card-body">
                     <dl class="detail-list" id="d-details"></dl>
+                  </div>
+                </div>
+
+                <!-- Shown to everyone except the owner -->
+                <div class="card hidden" id="help-card">
+                  <div class="card-body">
+                    <h2 style="font-size: var(--fs-md); font-family: var(--font-sans);">Problem with this dataset?</h2>
+                    <p class="text-sm mt-1">Report it if it breaks the rules, or ask support if something is wrong with your purchase or download.</p>
+                    <div class="help-actions">
+                      <button class="btn btn-secondary btn-sm" type="button" id="open-report">Report this dataset</button>
+                      <a class="btn btn-ghost btn-sm" id="support-link" href="/pages/support/new.html">Ask support</a>
+                    </div>
                   </div>
                 </div>
 
@@ -275,6 +294,7 @@
 <script src="/assets/js/utils.js"></script>
 <script src="/assets/js/auth.js"></script>
 <script src="/assets/js/components.js"></script>
+<script src="/assets/js/report.js"></script>
 
 <!-- Dataset page behavior -->
 <script>
@@ -684,6 +704,10 @@
       setupMainButton();
 
       $('owner-card').classList.toggle('hidden', !isOwner());
+
+      // The report and support card is for everyone except the owner
+      $('help-card').classList.toggle('hidden', isOwner());
+      $('support-link').href = '/pages/support/new.html?dataset=' + encodeURIComponent(d.id);
     }
 
     /* ---------- Has this member bought it? ---------- */
@@ -734,6 +758,11 @@
 
     $('download-btn').addEventListener('click', onMainButton);
     $('delete-btn').addEventListener('click', deleteDataset);
+
+    $('open-report').addEventListener('click', function () {
+      if (!dataset || !window.Report) return;
+      Report.open({ type: 'dataset', id: dataset.id, label: dataset.title });
+    });
 
     // Coming back with the browser's back button from the payment page
     window.addEventListener('pageshow', function (e) {

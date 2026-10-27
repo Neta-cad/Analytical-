@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Members | Analytical Admin</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0a1628">
+
+  <!-- Navy is the default theme. A saved choice is respected. -->
+  <script>
+    (function () {
+      var key = 'analytical-theme';
+      var theme = 'dark';
+      try {
+        var saved = localStorage.getItem(key);
+        if (saved === 'light' || saved === 'dark') {
+          theme = saved;
+        } else {
+          localStorage.setItem(key, 'dark');
+        }
+      } catch (e) { /* storage blocked: stay on dark */ }
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <style>
+    .member-list {
+      display: grid;
+      gap: var(--sp-3);
+      max-width: 860px;
+    }
+
+    .member-body {
+      display: grid;
+      gap: var(--sp-3);
+      padding: var(--sp-4) var(--sp-5);
+    }
+
+    .member-name {
+      font-family: var(--font-sans);
+      font-size: var(--fs-md);
+      font-weight: 600;
+      word-break: break-word;
+    }
+
+    .member-email {
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+      word-break: break-all;
+    }
+
+    .member-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+    }
+
+    .member-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-1) var(--sp-4);
+      font-size: var(--fs-xs);
+      color: var(--text-muted);
+    }
+
+    .member-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sp-2);
+      padding-top: var(--sp-3);
+      border-top: 1px solid var(--border);
+    }
+
+    .result-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-3);
+      margin-bottom: var(--sp-4);
+    }
+
+    .stack > * + * {
+      margin-top: var(--sp-4);
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div data-component="nav"></div>
+
+  <main class="page-main" id="main">
+
+    <section class="page-header">
+      <div class="container">
+        <h1>Members</h1>
+        <p id="role-note">Search, verify and manage members.</p>
+
+        <form class="search-bar mt-4" id="search-form" role="search" novalidate style="max-width: 640px;">
+          <div class="input-group">
+            <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+            <input class="input" id="q" name="q" type="search" maxlength="60"
+                   autocomplete="off" autocapitalize="none"
+                   placeholder="Search by name, username or email" aria-label="Search members">
+          </div>
+          <button class="btn btn-primary" type="submit">Search</button>
+        </form>
+      </div>
+    </section>
+
+    <section style="padding-block: var(--sp-6);">
+      <div class="container">
+
+        <!-- Loading -->
+        <div class="loading-block" id="loading-view" style="min-height: 40vh;">
+          <div class="spinner spinner-lg" role="status" aria-label="Loading members"></div>
+        </div>
+
+        <!-- Problem -->
+        <div class="hidden" id="problem-view">
+          <div class="empty-state">
+            <h3 id="problem-title">Could not load members</h3>
+            <p id="problem-text"></p>
+            <button class="btn btn-primary" type="button" onclick="window.location.reload()">Refresh</button>
+          </div>
+        </div>
+
+        <!-- Nothing found -->
+        <div class="hidden" id="empty-view">
+          <div class="empty-state">
+            <h3>No members found</h3>
+            <p>Try a different name, username or email address.</p>
+          </div>
+        </div>
+
+        <!-- The list -->
+        <div class="hidden" id="list-view">
+          <div class="result-bar">
+            <p class="text-sm" id="result-count" aria-live="polite"></p>
+          </div>
+
+          <div class="member-list" id="member-list"></div>
+
+          <div class="pagination hidden" id="pagination" aria-label="Pages"></div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div data-component="footer"></div>
+
+</div>
+
+<!-- Change role window -->
+<div class="modal-backdrop" id="role-modal" role="dialog" aria-modal="true" aria-labelledby="role-heading" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="role-heading" style="font-size: var(--fs-lg);">Change role</h2>
+      <button class="btn btn-ghost btn-sm" type="button" data-modal-close aria-label="Close">Close</button>
+    </div>
+
+    <form id="role-form" novalidate>
+      <div class="modal-body">
+        <p class="text-sm" id="role-summary" style="margin-bottom: var(--sp-4);"></p>
+
+        <div class="alert alert-danger hidden" id="role-error" role="alert" style="margin-bottom: var(--sp-4);"></div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="role-select">Role</label>
+          <select class="select" id="role-select">
+            <option value="member">Member: a normal account</option>
+            <option value="moderator">Moderator: can verify, take down datasets, handle tickets and reports</option>
+            <option value="admin">Admin: everything, including roles and suspensions</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-secondary" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-primary" type="submit" id="role-save">Save role</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Suspend window -->
+<div class="modal-backdrop" id="suspend-modal" role="dialog" aria-modal="true" aria-labelledby="suspend-heading" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="suspend-heading" style="font-size: var(--fs-lg);">Suspend member</h2>
+      <button class="btn btn-ghost btn-sm" type="button" data-modal-close aria-label="Close">Close</button>
+    </div>
+
+    <form id="suspend-form" novalidate>
+      <div class="modal-body">
+        <p class="text-sm" id="suspend-summary" style="margin-bottom: var(--sp-4);"></p>
+
+        <div class="alert alert-danger hidden" id="suspend-error" role="alert" style="margin-bottom: var(--sp-4);"></div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" for="suspend-reason">Reason (kept in the audit log)</label>
+          <textarea class="textarea" id="suspend-reason" maxlength="300" style="min-height: 90px;"
+                    placeholder="For example: repeated copyright complaints"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-secondary" type="button" data-modal-close>Cancel</button>
+        <button class="btn btn-danger" type="submit" id="suspend-save">Suspend member</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Scripts: keep this exact order -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="/assets/js/config.js"></script>
+<script src="/assets/js/supabase.js"></script>
+<script src="/assets/js/ui.js"></script>
+<script src="/assets/js/utils.js"></script>
+<script src="/assets/js/components.js"></script>
+<script src="/assets/js/admin.js"></script>
+
+<!-- Members behavior -->
+<script>
+  (function () {
+    'use strict';
+
+    if (!window.APP_CONFIG || !window.Admin || !window.sb) return;
+
+    function $(id) { return document.getElementById(id); }
+
+    var PAGE_SIZE = 25;
+
+    var ROLE_BADGE = {
+      admin: { label: 'Admin', className: 'badge badge-warning' },
+      moderator: { label: 'Moderator', className: 'badge badge-info' },
+      member: { label: 'Member', className: 'badge' }
+    };
+
+    var me = null;          // the signed-in staff member
+    var isAdmin = false;
+    var members = [];
+    var state = { q: '', page: 1 };
+    var requestId = 0;
+    var current = null;     // the member an open window is about
+
+    var qInput = $('q');
+
+    /* ---------- Small helpers ---------- */
+    function showView(name) {
+      $('loading-view').classList.toggle('hidden', name !== 'loading');
+      $('problem-view').classList.toggle('hidden', name !== 'problem');
+      $('empty-view').classList.toggle('hidden', name !== 'empty');
+      $('list-view').classList.toggle('hidden', name !== 'list');
+    }
+
+    function mkEl(tag, className, text) {
+      var el = document.createElement(tag);
+      if (className) el.className = className;
+      if (text != null) el.textContent = text;
+      return el;
+    }
+
+    function displayName(m) {
+      return m.full_name || m.username;
+    }
+
+    function findMember(id) {
+      for (var i = 0; i < members.length; i++) {
+        if (members[i].id === id) return members[i];
+      }
+      return null;
+    }
+
+    function profileUrl(m) {
+      return APP_CONFIG.mainSiteUrl + '/pages/profile/view.html?u=' + encodeURIComponent(m.username);
+    }
+
+    /* ---------- Read and write the address ---------- */
+    function readUrl() {
+      state.q = String(Utils.getParam('q') || '').slice(0, 60);
+      var page = parseInt(Utils.getParam('page'), 10);
+      state.page = page > 0 ? page : 1;
+      qInput.value = state.q;
+    }
+
+    function writeUrl() {
+      var params = new URLSearchParams();
+      if (state.q) params.set('q', state.q);
+      if (state.page > 1) params.set('page', String(state.page));
+      var query = params.toString();
+      history.replaceState(null, '', window.location.pathname + (query ? '?' + query : ''));
+    }
+
+    /* ---------- One member ---------- */
+    function actionButton(label, className, action, id) {
+      var btn = mkEl('button', 'btn btn-sm ' + className, label);
+      btn.type = 'button';
+      btn.setAttribute('data-action', action);
+      btn.setAttribute('data-id', id);
+      return btn;
+    }
+
+    function buildMember(m) {
+      var card = mkEl('div', 'card');
+      var body = mkEl('div', 'member-body');
+
+      /* Name and email */
+      var who = mkEl('div');
+      who.appendChild(mkEl('div', 'member-name', displayName(m)));
+
+      var handle = mkEl('a', 'text-xs', '@' + m.username);
+      handle.href = profileUrl(m);
+      handle.target = '_blank';
+      handle.rel = 'noopener';
+      who.appendChild(handle);
+
+      if (m.email) who.appendChild(mkEl('div', 'member-email', m.email));
+      body.appendChild(who);
+
+      /* Badges */
+      var badges = mkEl('div', 'member-badges');
+      var role = ROLE_BADGE[m.user_role] || ROLE_BADGE.member;
+      badges.appendChild(mkEl('span', role.className, role.label));
+      if (m.is_verified) badges.appendChild(mkEl('span', 'badge badge-brand', 'Verified'));
+      if (m.is_suspended) badges.appendChild(mkEl('span', 'badge badge-danger', 'Suspended'));
+      if (me && m.id === me.user.id) badges.appendChild(mkEl('span', 'badge badge-success', 'This is you'));
+      body.appendChild(badges);
+
+      /* Facts */
+      var meta = mkEl('div', 'member-meta');
+      var bits = [
+        m.country ? Utils.countryName(m.country) : null,
+        'Joined ' + Utils.formatDate(m.created_at),
+        Number(m.datasets_count).toLocaleString() + (Number(m.datasets_count) === 1 ? ' dataset' : ' datasets'),
+        Number(m.purchases_count).toLocaleString() + (Number(m.purchases_count) === 1 ? ' purchase' : ' purchases')
+      ];
+      bits.forEach(function (text) {
+        if (text) meta.appendChild(mkEl('span', null, text));
+      });
+      body.appendChild(meta);
+
+      /* Actions: none on your own account */
+      var isSelf = me && m.id === me.user.id;
+
+      if (!isSelf) {
+        var actions = mkEl('div', 'member-actions');
+
+        actions.appendChild(actionButton(
+          m.is_verified ? 'Remove verified' : 'Verify',
+          'btn-secondary',
+          'verify',
+          m.id
+        ));
+
+        if (isAdmin) {
+          actions.appendChild(actionButton('Change role', 'btn-secondary', 'role', m.id));
+
+          // Admins cannot be suspended: change their role first
+          if (m.is_suspended) {
+            actions.appendChild(actionButton('Restore', 'btn-primary', 'restore', m.id));
+          } else if (m.user_role !== 'admin') {
+            actions.appendChild(actionButton('Suspend', 'btn-danger', 'suspend', m.id));
+          }
+        }
+
+        body.appendChild(actions);
+      }
+
+      card.appendChild(body);
+      return card;
+    }
+
+    /* ---------- Pagination ---------- */
+    function pageButton(label, page, disabled) {
+      var btn = mkEl('button', 'page-btn', label);
+      btn.type = 'button';
+      btn.disabled = !!disabled;
+
+      btn.addEventListener('click', function () {
+        state.page = page;
+        load();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      return btn;
+    }
+
+    function renderPagination(hasNext) {
+      var wrap = $('pagination');
+      wrap.innerHTML = '';
+
+      if (state.page <= 1 && !hasNext) {
+        wrap.classList.add('hidden');
+        return;
+      }
+
+      wrap.appendChild(pageButton('Previous', state.page - 1, state.page <= 1));
+
+      var current = mkEl('span', 'page-btn active', String(state.page));
+      wrap.appendChild(current);
+
+      wrap.appendChild(pageButton('Next', state.page + 1, !hasNext));
+      wrap.classList.remove('hidden');
+    }
+
+    /* ---------- Load ---------- */
+    async function load(isRetry) {
+      var id = ++requestId;
+      showView('loading');
+      writeUrl();
+
+      var result = await sb.rpc('admin_list_members', {
+        p_search: state.q,
+        p_limit: PAGE_SIZE + 1,           // one extra row tells us if there is a next page
+        p_offset: (state.page - 1) * PAGE_SIZE
+      });
+
+      if (id !== requestId) return; // a newer search is already running
+
+      if (result.error) {
+        console.error('[Analytical Admin] Could not load members:', result.error);
+
+        $('problem-title').textContent = Admin.isMissingSetup(result.error)
+          ? 'The admin database is not set up yet'
+          : 'Could not load members';
+
+        $('problem-text').textContent = Admin.isMissingSetup(result.error)
+          ? 'Run the admin.sql file in the Supabase SQL Editor, then refresh this page.'
+          : Admin.message(result.error);
+
+        showView('problem');
+        return;
+      }
+
+      var rows = result.data || [];
+
+      // A page number beyond the last page: go back to page 1 once
+      if (!rows.length && state.page > 1 && !isRetry) {
+        state.page = 1;
+        load(true);
+        return;
+      }
+
+      if (!rows.length) {
+        showView('empty');
+        return;
+      }
+
+      var hasNext = rows.length > PAGE_SIZE;
+      members = rows.slice(0, PAGE_SIZE);
+
+      var list = $('member-list');
+      list.innerHTML = '';
+      members.forEach(function (m) { list.appendChild(buildMember(m)); });
+
+      var first = (state.page - 1) * PAGE_SIZE + 1;
+      var last = first + members.length - 1;
+      $('result-count').textContent = 'Showing ' + first + ' to ' + last + (state.q ? ' (search results)' : '');
+
+      showView('list');
+      renderPagination(hasNext);
+    }
+
+    /* ---------- Buttons on the member cards ---------- */
+    $('member-list').addEventListener('click', function (e) {
+      var target = e.target;
+      if (!(target instanceof Element)) return;
+
+      var btn = target.closest('[data-action]');
+      if (!btn) return;
+
+      var m = findMember(btn.getAttribute('data-id'));
+      if (!m) return;
+
+      var action = btn.getAttribute('data-action');
+
+      if (action === 'verify') toggleVerified(m, btn);
+      if (action === 'role') openRole(m);
+      if (action === 'suspend') openSuspend(m);
+      if (action === 'restore') restoreMember(m, btn);
+    });
+
+    /* ---------- Verify ---------- */
+    async function toggleVerified(m, btn) {
+      var next = !m.is_verified;
+
+      UI.setLoading(btn, true);
+      var result = await sb.rpc('admin_set_verified', { p_user_id: m.id, p_value: next });
+      UI.setLoading(btn, false);
+
+      if (result.error) {
+        UI.toast.error(Admin.message(result.error));
+        return;
+      }
+
+      UI.toast.success(next ? 'Member verified.' : 'Verified badge removed.');
+      load();
+    }
+
+    /* ---------- Restore ---------- */
+    async function restoreMember(m, btn) {
+      var ok = await UI.confirm({
+        title: 'Restore this member?',
+        message: displayName(m) + ' will be able to upload, download and buy again.',
+        confirmText: 'Restore'
+      });
+      if (!ok) return;
+
+      UI.setLoading(btn, true);
+      var result = await sb.rpc('admin_set_suspended', { p_user_id: m.id, p_value: false, p_reason: null });
+      UI.setLoading(btn, false);
+
+      if (result.error) {
+        UI.toast.error(Admin.message(result.error));
+        return;
+      }
+
+      UI.toast.success('Member restored.');
+      load();
+    }
+
+    /* ---------- Change role window ---------- */
+    var roleError = $('role-error');
+    var roleSave = $('role-save');
+
+    function openRole(m) {
+      current = m;
+      roleError.classList.add('hidden');
+
+      $('role-summary').textContent = 'Change the role of ' + displayName(m) + ' (@' + m.username + ').';
+      $('role-select').value = m.user_role || 'member';
+
+      UI.openModal('role-modal');
+    }
+
+    $('role-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      roleError.classList.add('hidden');
+
+      if (!current) return;
+
+      var role = $('role-select').value;
+      var target = current;
+
+      if (role === target.user_role) {
+        roleError.textContent = 'That is already their role.';
+        roleError.classList.remove('hidden');
+        return;
+      }
+
+      if (role === 'admin') {
+        var ok = await UI.confirm({
+          title: 'Make this member an admin?',
+          message: 'Admins can change roles, suspend members, delete datasets and read the audit log. Only do this for someone you fully trust.',
+          confirmText: 'Make admin',
+          danger: true
+        });
+        if (!ok) return;
+      }
+
+      UI.setLoading(roleSave, true);
+      var result = await sb.rpc('admin_set_role', { p_user_id: target.id, p_role: role });
+      UI.setLoading(roleSave, false);
+
+      if (result.error) {
+        roleError.textContent = Admin.message(result.error);
+        roleError.classList.remove('hidden');
+        return;
+      }
+
+      UI.closeModal('role-modal');
+      current = null;
+      UI.toast.success('Role updated.');
+      load();
+    });
+
+    /* ---------- Suspend window ---------- */
+    var suspendError = $('suspend-error');
+    var suspendSave = $('suspend-save');
+
+    function openSuspend(m) {
+      current = m;
+      suspendError.classList.add('hidden');
+
+      $('suspend-summary').textContent =
+        'Suspend ' + displayName(m) + ' (@' + m.username + ')? They will not be able to upload, edit datasets, download or buy. ' +
+        'They can still contact support to appeal.';
+      $('suspend-reason').value = '';
+
+      UI.openModal('suspend-modal');
+    }
+
+    $('suspend-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      suspendError.classList.add('hidden');
+
+      if (!current) return;
+
+      var target = current;
+      var reason = $('suspend-reason').value.trim().slice(0, 300);
+
+      UI.setLoading(suspendSave, true);
+      var result = await sb.rpc('admin_set_suspended', { p_user_id: target.id, p_value: true, p_reason: reason || null });
+      UI.setLoading(suspendSave, false);
+
+      if (result.error) {
+        suspendError.textContent = Admin.message(result.error);
+        suspendError.classList.remove('hidden');
+        return;
+      }
+
+      UI.closeModal('suspend-modal');
+      current = null;
+      UI.toast.success('Member suspended.');
+      load();
+    });
+
+    /* ---------- Search ---------- */
+    $('search-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      state.q = qInput.value.trim().slice(0, 60);
+      state.page = 1;
+      qInput.blur();
+      load();
+    });
+
+    /* ---------- Staff only, then show ---------- */
+    async function start() {
+      var context = await Admin.require();
+      if (!context) return; // sent to the login page, or shown a message
+
+      me = context;
+      isAdmin = context.profile.user_role === 'admin';
+
+      $('role-note').textContent = isAdmin
+        ? 'Search members, verify them, change roles and suspend accounts.'
+        : 'Search members and verify them. Changing roles and suspending accounts is for admins.';
+
+      readUrl();
+      load();
+    }
+
+    start();
+  })();
+</script>
+</body>
+</html>
